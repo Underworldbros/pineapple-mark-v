@@ -4,6 +4,10 @@ Complete backup of SD card contents for WiFi Pineapple Mark V.
 
 ## Contents
 
+### Firmware (`flash/`)
+- `mk5_factory.bin` - Factory firmware image
+- `upgrade-3.0.0.bin` - Upgrade firmware image
+
 ### SD Card Contents (`sd-card/`)
 - **Infusion Tarballs** - All 43+ infusion installations (*.tar.gz)
 - **infusionmanager/** - Custom infusion manager module
