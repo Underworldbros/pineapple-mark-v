@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Infusion Manager Installer - called via at job
+# Usage: installer <infusion_name>
+
+NAME="$1"
+SD="/sd"
+INFUSIONS_LINK="/pineapple/components/infusions"
+
+if [ -z "$NAME" ]; then
+    echo "Error: No infusion name provided"
+    exit 1
+fi
+
+# Find tarball
+TARBALLCMD="ls $SD/$NAME-*.tar.gz 2>/dev/null"
+TARBALL=`$TARBALLCMD | head -n1`
+
+if [ -z "$TARBALL" ] || [ ! -f "$TARBALL" ]; then
+    echo "Error: Tarball not found for $NAME"
+    exit 1
+fi
+
+# Extract
+cd "$SD"
+tar -xzf "$TARBALL"
+
+# Create symlink
+if [ -d "$SD/$NAME" ] && [ ! -L "$INFUSIONS_LINK/$NAME" ]; then
+    ln -s "$SD/$NAME" "$INFUSIONS_LINK/$NAME"
+    echo "Success: $NAME installed"
+    exit 0
+fi
+
+echo "Error: Installation failed"
+exit 1

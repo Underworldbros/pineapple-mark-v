@@ -1,38 +1,47 @@
-# WiFi Pineapple Mark 5 Configuration
+# WiFi Pineapple Mark V Configuration
 
-Custom configurations and modules for the WiFi Pineapple Mark 5.
+Complete backup of SD card contents for WiFi Pineapple Mark V.
 
-## What's Included
+## Contents
 
-### Configurations
-- `config/opkg.conf` - OPKG package manager config with SD card as default storage
-- `config/nginx.conf` - Nginx web server config with SSL support
+### SD Card Contents (`sd-card/`)
+- **Infusion Tarballs** - All 43+ infusion installations (*.tar.gz)
+- **infusionmanager/** - Custom infusion manager module
+- **terminal/** - Custom web-based terminal module  
+- **status/** - Status module
+- **usr/bin/** - Pre-installed packages (htop, nmap, etc.)
 
-### Custom Modules
-- `modules/infusionmanager/` - Infusion manager module
-- `modules/terminal/` - Web-based terminal module
+## What's Installed
 
-## Setup
+### Packages on SD
+- htop - Process viewer
+- nmap - Network scanner
+- (additional packages available via opkg)
 
-1. **OPKG with SD Card Default:**
-   Copy `config/opkg.conf` to `/etc/opkg.conf` on the Pineapple.
+### Configuration Files (`config/`)
+- `opkg.conf` - OPKG with SD card as default storage
+- `nginx.conf` - Nginx with SSL (port 1471)
+
+## Quick Restore
+
+1. **Install packages to SD:**
+   Copy `config/opkg.conf` to `/etc/opkg.conf` on Pineapple
 
 2. **Enable HTTPS:**
-   Copy `config/nginx.conf` to `/etc/nginx/nginx.conf` and restart nginx.
+   Copy `config/nginx.conf` to `/etc/nginx/nginx.conf`
 
-## Package Installation
+3. **Install Infusions:**
+   Upload tarballs from `sd-card/` via web interface
 
-The configured opkg uses the OpenWRT Chaos Calmer 15.05.1 repository which has working ar71xx packages.
+## OPKG Usage
 
 ```bash
 opkg update
-opkg install <package>
+opkg install <package>  # Installs to SD by default
 ```
-
-Packages install to SD card by default.
 
 ## Notes
 
 - Root filesystem is only 3.1MB - always install packages to SD
-- Use `opkg install -d sd <package>` or the default SD destination
-- Some packages from Chaos Calmer may have library version mismatches
+- HTTPS available at https://172.16.42.1:1471
+- HTTP redirects to HTTPS

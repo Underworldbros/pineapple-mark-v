@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Infusion Manager Uninstaller - called via at job
+# Usage: uninstaller <infusion_name>
+
+NAME="$1"
+SD="/sd"
+INFUSIONS_LINK="/pineapple/components/infusions"
+
+if [ -z "$NAME" ]; then
+    echo "Error: No infusion name provided"
+    exit 1
+fi
+
+# Remove symlink
+if [ -L "$INFUSIONS_LINK/$NAME" ]; then
+    rm "$INFUSIONS_LINK/$NAME"
+fi
+
+# Remove directory
+if [ -d "$SD/$NAME" ]; then
+    rm -rf "$SD/$NAME"
+    echo "Success: $NAME uninstalled"
+    exit 0
+fi
+
+echo "Error: $NAME not found"
+exit 1
