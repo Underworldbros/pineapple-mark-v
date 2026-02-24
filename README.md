@@ -56,6 +56,14 @@ opkg update
 opkg install <package>  # Installs to SD by default
 ```
 
+## Pen-Testing Tools
+
+The Pineapple's infusion tools (ettercap, sslstrip, nmap, tcpdump, etc.) are bundled in the infusions themselves.
+
+**Known dependency issues:**
+- Some older tools (mdk3, reaver, bully, pixiewps) are listed in the deprecated Pineapple cloud repo but the actual .ipk files return 404 (not found)
+- These would need to be cross-compiled from source or found elsewhere
+
 ## Default Access
 
 - **HTTP:** http://172.16.42.1
