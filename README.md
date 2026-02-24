@@ -31,21 +31,38 @@ Custom configurations from `/etc/` - non-stock settings:
 ## Quick Restore
 
 ### Option 1: Fresh Flash + SD Card
-1. Flash `flash/mk5_factory.bin` or `flash/upgrade-3.0.0.bin`
-2. Copy `internal-flash/etc/opkg.conf` to `/etc/opkg.conf`
-3. Copy `internal-flash/etc/nginx.conf` to `/etc/nginx/nginx.conf`
-4. Install SSL certs from `internal-flash/etc/ssl/`
-5. Upload infusion tarballs from `sd-card/` via web interface
+1. Flash `flash/mk5_factory.bin` or `flash/upgrade-3.0.bin`
+2. Power on and wait for boot
+3. Connect via Ethernet - you'll get IP 172.16.42.2
+4. **Enable SSH:** Go to http://172.16.42.1 → Settings → SSH Enable
+5. **Copy SD card contents:**
+   ```bash
+   # Mount your SD card on computer, copy all files from sd-card/ to SD root
+   # Or use SCP after connecting:
+   scp -r sd-card/* root@172.16.42.1:/sd/
+   ```
+6. **Enable Infusion Manager (CRITICAL):**
+   ```bash
+   ssh root@172.16.42.1
+   ln -s /sd/infusionmanager /pineapple/components/infusions/infusionmanager
+   ```
+7. **Refresh web UI** - Infusion Manager tile should appear in the sidebar
 
-### Option 2: Running System
+### Option 2: Running System (already configured)
 ```bash
 # Copy configs
 scp internal-flash/etc/opkg.conf root@172.16.42.1:/etc/opkg.conf
 scp internal-flash/etc/nginx.conf root@172.16.42.1:/etc/nginx/nginx.conf
 scp internal-flash/etc/ssl/* root@172.16.42.1:/etc/ssl/
 
+# Copy SD contents
+scp -r sd-card/* root@172.16.42.1:/sd/
+
+# Enable Infusion Manager
+ssh root@172.16.42.1 "ln -s /sd/infusionmanager /pineapple/components/infusions/infusionmanager"
+
 # Restart services
-ssh root@172.16.421 "/etc/init.d/nginx restart"
+ssh root@172.16.42.1 "/etc/init.d/nginx restart"
 ```
 
 ## OPKG Usage
