@@ -95,8 +95,8 @@ Some older tools require additional packages:
 | Tool | Infusion | Status | Solution |
 |------|----------|--------|----------|
 | mdk3 | deauth, occupineapple | ✅ Ready | Install via Infusion Manager → Dependencies |
-| aireplay-ng | deauth | ⚠️ Use mdk3 | Requires libnl-genl (not available) |
-| airmon-ng | deauth | ⚠️ Use built-in | Use `airmon-ng` from aircrack-ng or iw |
+| aireplay-ng | deauth | ✅ Ready | Install via Infusion Manager → Dependencies |
+| airmon-ng | deauth | ✅ Ready | Install via Infusion Manager → Dependencies |
 | sslstrip | sslstrip, strip-n-inject | ❌ Missing | Requires Python Twisted |
 | nbtscan | nbtscan | ❌ Missing | Needs compilation |
 | hping3 | crafty | ❌ Missing | Needs compilation |

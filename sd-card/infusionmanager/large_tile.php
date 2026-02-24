@@ -77,8 +77,8 @@ function getInfusionStatus($name, &$installed) {
 <div style="font-weight:bold;color:#f90;margin-bottom:8px;">Dependencies</div>
 <div style="margin:4px 0;font-size:12px;"><span id="st-mdk3" class="status-<?php echo getInfusionStatus('mdk3', $installed); ?>" style="color:#888">&#9675;</span> mdk3 <button <?php echo getInfusionStatus('mdk3', $installed) == 'installed' ? 'class="btn-uninstall" onclick="uninstall(\'mdk3\')"' : 'onclick="install(\'mdk3\')"'; ?> style="cursor:pointer;"><?php echo getInfusionStatus('mdk3', $installed) == 'installed' ? 'Uninstall' : 'Install'; ?></button></div>
 <div style="font-size:10px;color:#888;margin-top:5px;">Required by deauth, occupineapple</div>
-<div style="margin:4px 0;font-size:12px;"><span id="st-aireplay-ng" class="status-notinstalled" style="color:#888">&#9675;</span> aireplay-ng <span style="color:#f90;font-size:9px;">mdk3 recommended</span></div>
-<div style="margin:4px 0;font-size:12px;"><span id="st-airmon-ng" class="status-notinstalled" style="color:#888">&#9675;</span> airmon-ng <span style="color:#f90;font-size:9px;">mdk3 recommended</span></div>
+<div style="margin:4px 0;font-size:12px;"><span id="st-aireplay" class="status-<?php echo getInfusionStatus('aireplay', $installed); ?>" style="color:#888">&#9675;</span> aireplay <button <?php echo getInfusionStatus('aireplay', $installed) == 'installed' ? 'class="btn-uninstall" onclick="uninstall(\'aireplay\')"' : 'onclick="install(\'aireplay\')"'; ?> style="cursor:pointer;"><?php echo getInfusionStatus('aireplay', $installed) == 'installed' ? 'Uninstall' : 'Install'; ?></button></div>
+<div style="font-size:10px;color:#888;margin-top:5px;">Includes aireplay, airmon, airodump</div>
 </div>
 
 <div style="border:1px solid #444;padding:10px;min-width:140px;background:#222;border-radius:5px;">
