@@ -60,9 +60,63 @@ opkg install <package>  # Installs to SD by default
 
 The Pineapple's infusion tools (ettercap, sslstrip, nmap, tcpdump, etc.) are bundled in the infusions themselves.
 
-**Known dependency issues:**
-- Some older tools (mdk3, reaver, bully, pixiewps) are listed in the deprecated Pineapple cloud repo but the actual .ipk files return 404 (not found)
-- These would need to be cross-compiled from source or found elsewhere
+### Pre-built Packages (`packages/`)
+
+This repository includes pre-built packages for ar71xx architecture:
+
+| Package | Status | Notes |
+|---------|--------|-------|
+| mdk3 | ✅ Ready | Built from source for ar71xx |
+| aircrack-ng | ⚠️ Partial | See notes below |
+
+### Installing Pre-built Packages
+
+#### Option 1: Infusion Manager (Recommended)
+
+1. Go to your Pineapple's web interface
+2. Navigate to **Infusion Manager**
+3. Find the **Dependencies** category (orange color)
+4. Click **Install** next to mdk3
+
+The infusion manager will install mdk3 to `/sd/usr/bin/mdk3`.
+
+#### Option 2: Manual
+
+```bash
+# Copy mdk3 to your Pineapple
+scp packages/mdk3 root@172.16.42.1:/sd/usr/bin/
+ssh root@172.16.42.1 "chmod +x /sd/usr/bin/mdk3"
+```
+
+### Known Dependency Issues
+
+Some older tools require additional packages:
+
+| Tool | Infusion | Status | Solution |
+|------|----------|--------|----------|
+| mdk3 | deauth, occupineapple | ✅ Ready | Install via Infusion Manager → Dependencies |
+| aireplay-ng | deauth | ❌ Missing | Part of aircrack-ng suite |
+| airmon-ng | deauth | ❌ Missing | Part of aircrack-ng suite |
+| sslstrip | sslstrip, strip-n-inject | ❌ Missing | Requires Python Twisted |
+| nbtscan | nbtscan | ❌ Missing | Needs compilation |
+| hping3 | crafty | ❌ Missing | Needs compilation |
+| p0f | p0f | ❌ Missing | Needs compilation |
+| reaver | wps | ❌ Missing | Needs compilation |
+| bully | wps | ❌ Missing | Needs compilation |
+| pixiewps | wps | ❌ Missing | Needs compilation |
+
+### Building from Source
+
+The OpenWRT SDK (Chaos Calmer 15.05) can be used to build these tools:
+
+1. Download OpenWRT SDK:
+```bash
+wget https://archive.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64.tar.bz2
+```
+
+2. Use the toolchain to cross-compile tools for mips32r2 (ar71xx)
+
+Note: Pre-built packages for mipsel_24kc (newer routers) exist at https://github.com/xiv3r/openwrt-pentest but are NOT compatible with ar71xx.
 
 ## Default Access
 

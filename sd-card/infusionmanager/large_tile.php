@@ -74,6 +74,12 @@ function getInfusionStatus($name, &$installed) {
 </div>
 
 <div style="border:1px solid #444;padding:10px;min-width:140px;background:#222;border-radius:5px;">
+<div style="font-weight:bold;color:#f90;margin-bottom:8px;">Dependencies</div>
+<div style="margin:4px 0;font-size:12px;"><span id="st-mdk3" class="status-<?php echo getInfusionStatus('mdk3', $installed); ?>" style="color:#888">&#9675;</span> mdk3 <button <?php echo getInfusionStatus('mdk3', $installed) == 'installed' ? 'class="btn-uninstall" onclick="uninstall(\'mdk3\')"' : 'onclick="install(\'mdk3\')"'; ?> style="cursor:pointer;"><?php echo getInfusionStatus('mdk3', $installed) == 'installed' ? 'Uninstall' : 'Install'; ?></button></div>
+<div style="font-size:10px;color:#888;margin-top:5px;">Required by deauth, occupineapple</div>
+</div>
+
+<div style="border:1px solid #444;padding:10px;min-width:140px;background:#222;border-radius:5px;">
 <div style="font-weight:bold;color:#4a9;margin-bottom:8px;">System</div>
 <div style="margin:4px 0;font-size:12px;"><span id="st-phials" class="status-<?php echo getInfusionStatus('phials', $installed); ?>" style="color:#888">&#9675;</span> phials <button <?php echo getInfusionStatus('phials', $installed) == 'installed' ? 'class="btn-uninstall" onclick="uninstall(\'phials\')"' : 'onclick="install(\'phials\')"'; ?> style="cursor:pointer;"><?php echo getInfusionStatus('phials', $installed) == 'installed' ? 'Uninstall' : 'Install'; ?></button></div>
 <div style="margin:4px 0;font-size:12px;"><span id="st-opkgmanager" class="status-<?php echo getInfusionStatus('opkgmanager', $installed); ?>" style="color:#888">&#9675;</span> opkgmanager <button <?php echo getInfusionStatus('opkgmanager', $installed) == 'installed' ? 'class="btn-uninstall" onclick="uninstall(\'opkgmanager\')"' : 'onclick="install(\'opkgmanager\')"'; ?> style="cursor:pointer;"><?php echo getInfusionStatus('opkgmanager', $installed) == 'installed' ? 'Uninstall' : 'Install'; ?></button></div>
