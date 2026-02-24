@@ -25,6 +25,9 @@ Custom configurations from `/etc/` - non-stock settings:
 - **status/** - Status module
 - **usr/bin/** - Pre-installed packages (htop, nmap, screen)
 
+### Scripts (`scripts/`)
+- **install-cert.sh** - Auto-install SSL certificate on your computer
+
 ## Quick Restore
 
 ### Option 1: Fresh Flash + SD Card
@@ -57,6 +60,24 @@ opkg install <package>  # Installs to SD by default
 
 - **HTTP:** http://172.16.42.1
 - **HTTPS:** https://172.16.42.1:1471 (self-signed cert)
+
+## SSL Certificate
+
+The Pineapple uses a self-signed SSL certificate. To avoid browser warnings:
+
+1. **Download cert:** Visit `http://172.16.42.1/ssl-cert.php` and save as `pineapple.crt`
+2. **Import to OS:**
+   - **Windows:** Double-click cert → Install → Trusted Root CA
+   - **macOS:** Keychain Access → File → Import → Set to "Always Trust"
+   - **Linux:** Copy to `/usr/local/share/ca-certificates/` and run `update-ca-certificates`
+   - **Firefox:** Settings → Privacy → View Certificates → Import (manual per-browser)
+
+Or use the auto-install script:
+```bash
+curl -O https://raw.githubusercontent.com/Underworldbros/pineapple-mark-v/main/scripts/install-cert.sh
+chmod +x install-cert.sh
+./install-cert.sh
+```
 
 ## Notes
 
