@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Infusion Manager Uninstaller - called via at job
 # Usage: uninstaller <infusion_name>
@@ -15,6 +15,18 @@ fi
 # Remove symlink
 if [ -L "$INFUSIONS_LINK/$NAME" ]; then
     rm "$INFUSIONS_LINK/$NAME"
+fi
+
+# Remove copied bin/lib files (for dependency packages)
+if [ -d "$SD/$NAME/usr/sbin" ]; then
+    for bin in $(ls "$SD/$NAME/usr/sbin/"); do
+        rm -f "$SD/usr/sbin/$bin" 2>/dev/null
+    done
+fi
+if [ -d "$SD/$NAME/usr/lib" ]; then
+    for lib in $(ls "$SD/$NAME/usr/lib/"); do
+        rm -f "$SD/usr/lib/$lib" 2>/dev/null
+    done
 fi
 
 # Remove directory

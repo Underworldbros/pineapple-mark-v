@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Infusion Manager Installer - called via at job
 # Usage: installer <infusion_name>
@@ -24,6 +24,18 @@ fi
 # Extract
 cd "$SD"
 tar -xzf "$TARBALL"
+
+# Copy bin/lib files to standard locations (for dependency packages)
+if [ -d "$SD/$NAME/usr/sbin" ]; then
+    for f in "$SD/$NAME/usr/sbin/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/sbin/"
+    done
+fi
+if [ -d "$SD/$NAME/usr/lib" ]; then
+    for f in "$SD/$NAME/usr/lib/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/lib/"
+    done
+fi
 
 # Create symlink
 if [ -d "$SD/$NAME" ] && [ ! -L "$INFUSIONS_LINK/$NAME" ]; then
