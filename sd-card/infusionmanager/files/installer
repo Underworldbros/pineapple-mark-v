@@ -37,6 +37,11 @@ if [ -d "$SD/$NAME/usr/lib" ]; then
     done
 fi
 
+# Fix libpcap version compatibility
+if [ -f "$SD/usr/lib/libpcap.so.1.1" ] || [ -f "$SD/usr/lib/libpcap.so.1.1.1" ]; then
+    ln -sf /usr/lib/libpcap.so.1.1 "$SD/usr/lib/libpcap.so.1.3" 2>/dev/null
+fi
+
 # Create symlink
 if [ -d "$SD/$NAME" ] && [ ! -L "$INFUSIONS_LINK/$NAME" ]; then
     ln -s "$SD/$NAME" "$INFUSIONS_LINK/$NAME"
