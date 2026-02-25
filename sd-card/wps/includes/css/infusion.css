@@ -1,0 +1,189 @@
+select.wps {
+	background-color: black;
+	border-style: none;
+	color: green;
+}
+
+input.wps {
+	background-color: black;
+	color: green;
+	border-style: none;
+}
+
+textarea.wps {
+	background-color: black;
+	color: green;
+	border-style: none;
+	height: 250px;
+	width: 100%;
+}
+
+textarea#wps_output_small {
+	height: 70%;
+	color: white;
+	overflow: hidden;
+}
+
+input.wps[type="checkbox"] {
+	margin: 0;
+}
+
+.interfaces {
+	color: white;
+}
+.interfaces td {
+	padding-right: 20px;
+	margin: 0px;
+}
+
+.grid a {
+	color: green;
+}
+.graph-border {
+	background: #FFF;
+	border: 1px solid #DDD;
+	height: 16px;
+}
+.graph-bar {
+	text-align: left;
+	color: black;
+	height: 16px;
+}
+
+.graph {
+	color: white;
+	background: black;
+	font-weight: bold;
+}
+#wps-survey-grid.grid {
+	padding: 0;
+	border-spacing: 1px;
+	border-collapse: separate;
+	border: 1px solid #e0e0e0;
+	background: #fff;
+	width: 100%;
+	color: black;
+}
+
+#wps-survey-grid.grid tr {
+	cursor: pointer;
+}
+
+#wps-survey-grid.grid td {
+	padding: 2px;
+	margin: 0px;
+}
+#wps-survey-grid.grid .header {
+	color: black;
+	background: #e7e7e7;
+}
+#wps-survey-grid.grid .header td {
+	font-weight: bold;
+}
+#wps-survey-grid.grid .footer {
+	background: #f0f0f0;
+}
+#wps-survey-grid.grid .odd {
+	background: #f7f7f7;
+}
+#wps-survey-grid.grid .even {
+	background: #fff;
+}
+#wps-survey-grid.grid .clients {
+	font-style:italic;
+}
+
+#wps.grid {
+	padding: 0;
+	border-spacing: 1px;
+	border-collapse: separate;
+	color: black;
+}
+
+#wps.grid td {
+	padding: 2px;
+	margin: 0px;
+	color: black;
+}
+
+#wps.tab ul,
+#wps2.tab ul {
+	margin-left: -40px;
+}
+#wps.tab li,
+#wps2.tab li {
+	list-style: none;
+	float: left;
+}
+#wps.tab ul a,
+#wps2.tab ul a {
+	display: block;
+	padding: 6px 10px;
+	text-decoration: none!important;
+	margin: 1px;
+	margin-left: 0;
+	color: #FFF;
+	background: green;
+}
+#wps.tab ul a:hover,
+#wps2.tab ul a:hover {
+	color: #FFF;
+	background: #111;
+}
+#wps.tab ul a.selected,
+#wps2.tab ul a.selected {
+	margin-bottom: 0;
+	color: #000;
+	background: snow;
+	border-bottom: 1px solid snow;
+	cursor: default;
+}
+#wps.tab div,
+#wps2.tab div {
+	padding: 10px 5px;
+	clear: left;
+	background: snow;
+	color: black;
+}
+#wps.tab div a,
+#wps2.tab div a {
+	color: #000;
+	font-weight: bold;
+}
+
+.my_large_tile_content {
+    height: 95%;
+    overflow-y: scroll;
+    position: relative;
+}
+
+.sidePanelLeft {
+	margin-bottom: 15px;
+	text-align: left;
+	min-width: 380px;
+	max-width: 550px;
+	font-family: monospace;
+}
+
+.sidePanelTitle {
+	padding-left: 10px;
+	padding-top: 2px;
+	padding-bottom: 2px;
+	background: green;
+	font-weight: bold;
+	font-size: 15;
+	color: white;
+}
+
+.sidePanelContent {
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	background: black;
+	min-height: 40px;
+	color: white;
+	border-color: green;
+	border-style: solid;
+	border-width: 1px
+}
