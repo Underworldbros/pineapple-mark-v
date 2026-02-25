@@ -15,6 +15,24 @@ if (is_dir($infusions_link)) {
     }
 }
 
+# Also check for any directory on SD that has a tarball (pre-extracted infusions)
+$sd_items = scandir('/sd');
+foreach ($sd_items as $item) {
+    if ($item != '.' && $item != '..' && is_dir('/sd/' . $item)) {
+        # Check if there's a corresponding tarball
+        $tarball_match = false;
+        foreach ($sd_items as $f) {
+            if (preg_match('/^' . preg_quote($item, '/') . '-[\d\.]+\.tar\.gz$/', $f)) {
+                $tarball_match = true;
+                break;
+            }
+        }
+        if ($tarball_match) {
+            $installed[] = $item;
+        }
+    }
+}
+
 # Also check for extracted dependency packages on SD
 $sd_dirs = scandir('/sd');
 $dep_bins = array('mdk3', 'aireplay', 'nbtscan', 'p0f', 'reaver', 'bully', 'pixiewps');
@@ -23,8 +41,8 @@ foreach ($dep_bins as $bin) {
     if (is_dir('/sd/' . $bin)) {
         $installed[] = $bin;
     }
-    # Also check if binary exists in /sd/usr/sbin
-    elseif (file_exists('/sd/usr/sbin/' . $bin)) {
+    # Also check if binary exists in /sd/usr/sbin or /sd/usr/bin
+    elseif (file_exists('/sd/usr/sbin/' . $bin) || file_exists('/sd/usr/bin/' . $bin)) {
         $installed[] = $bin;
     }
 }
