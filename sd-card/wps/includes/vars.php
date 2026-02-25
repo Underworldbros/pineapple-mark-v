@@ -5,9 +5,9 @@ putenv('PATH='.getenv('PATH').':/sd/usr/bin:/sd/usr/sbin');
 
 global $directory, $rel_dir;
 
-$is_bully_installed = file_exists("/sd/usr/sbin/bully") ? 1 : 0;
+$is_bully_installed = exec("which bully") != "" ? 1 : 0;
 $is_reaver_installed = file_exists("/sd/usr/sbin/reaver") ? 1 : 0; $reaver_version = file_exists("/sd/reaver/VERSION") ? trim(file_get_contents("/sd/reaver/VERSION")) : "unknown";
-$is_pixiewps_installed = file_exists("/sd/usr/sbin/pixiewps") ? 1 : 0;
+$is_pixiewps_installed = exec("which pixiewps") != "" ? 1 : 0;
 
 $is_wps_running = exec("ps auxww | grep 'bully\|reaver' | grep -v -e grep | grep -v -e php") != "" ? 1 : 0;
 

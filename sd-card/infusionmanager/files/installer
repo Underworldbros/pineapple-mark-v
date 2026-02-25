@@ -112,6 +112,26 @@ if [ -d "$SD/$NAME/usr/bin" ]; then
     done
 fi
 
+# Copy VERSION file to package directory if it exists in the tarball
+if [ -f "$SD/$NAME/VERSION" ]; then
+    cp "$SD/$NAME/VERSION" "$SD/$NAME/VERSION"
+fi
+if [ -d "$SD/$NAME/usr/lib" ]; then
+    for f in "$SD/$NAME/usr/lib/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/lib/"
+    done
+fi
+if [ -d "$SD/$NAME/usr/bin" ]; then
+    for f in "$SD/$NAME/usr/bin/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/bin/"
+    done
+fi
+
+# Copy VERSION file if exists (for version tracking)
+if [ -f "$SD/$NAME/VERSION" ]; then
+    cp "$SD/$NAME/VERSION" "$SD/$NAME/"
+fi
+
 # Fix libpcap version compatibility
 if [ -f "$SD/usr/lib/libpcap.so.1.1" ] || [ -f "$SD/usr/lib/libpcap.so.1.1.1" ]; then
     ln -sf /usr/lib/libpcap.so.1.1 "$SD/usr/lib/libpcap.so.1.3" 2>/dev/null
