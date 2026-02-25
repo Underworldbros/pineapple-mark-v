@@ -1,6 +1,8 @@
 <?php
 $infusions_link = '/pineapple/components/infusions/';
 $installed = array();
+
+# Check symlinks (standard infusions)
 if (is_dir($infusions_link)) {
     $items = scandir($infusions_link);
     foreach ($items as $item) {
@@ -10,6 +12,20 @@ if (is_dir($infusions_link)) {
                 $installed[] = $item;
             }
         }
+    }
+}
+
+# Also check for extracted dependency packages on SD
+$sd_dirs = scandir('/sd');
+$dep_bins = array('mdk3', 'aireplay', 'nbtscan', 'p0f', 'reaver', 'bully', 'pixiewps');
+foreach ($dep_bins as $bin) {
+    # Check if directory exists on SD (extracted package)
+    if (is_dir('/sd/' . $bin)) {
+        $installed[] = $bin;
+    }
+    # Also check if binary exists in /sd/usr/sbin
+    elseif (file_exists('/sd/usr/sbin/' . $bin)) {
+        $installed[] = $bin;
     }
 }
 
