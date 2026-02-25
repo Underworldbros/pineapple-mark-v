@@ -29,6 +29,10 @@ if [ -d "$SD/$NAME/usr/lib" ]; then
     done
 fi
 
+# Also check for standalone binaries in /sd/usr/bin and /sd/usr/sbin
+rm -f "$SD/usr/bin/$NAME" 2>/dev/null
+rm -f "$SD/usr/sbin/$NAME" 2>/dev/null
+
 # Remove directory
 if [ -d "$SD/$NAME" ]; then
     rm -rf "$SD/$NAME"
