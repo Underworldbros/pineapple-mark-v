@@ -1,0 +1,6 @@
+# Set SD library path for all services
+export LD_LIBRARY_PATH=/sd/usr/lib:/usr/lib:/lib
+export PATH=$PATH:/sd/usr/sbin:/sd/usr/bin
+
+#Add your commands above this
+exit 0
