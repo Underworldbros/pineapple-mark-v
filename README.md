@@ -10,8 +10,10 @@ Complete backup of WiFi Pineapple Mark V - SD card contents + internal flash con
 
 ### Internal Flash (`internal-flash/`)
 Custom configurations from `/etc/` - non-stock settings:
-- **etc/opkg.conf** - Modified OPKG with SD card as default storage
+- **etc/opkg.conf** - Modified OPKG with Chaos Calmer repo + SD card as default storage
 - **etc/nginx.conf** - Nginx web server with HTTPS (port 1471)
+- **etc/rc.local** - Sets LD_LIBRARY_PATH for SD card binaries
+- **etc/profile** - Adds SD bin paths to PATH
 - **etc/ssl/** - SSL certificate and private key
 - **etc/config/pineap** - PineAP settings
 - **etc/config/system** - System config (hostname, timezone)
@@ -20,10 +22,10 @@ Custom configurations from `/etc/` - non-stock settings:
 
 ### SD Card Contents (`sd-card/`)
 - **Infusion Tarballs** - All 43+ infusions (*.tar.gz)
-- **infusionmanager/** - Custom infusion manager module
-- **terminal/** - Custom web-based terminal module
-- **status/** - Status module
+- **infusionmanager/** - Custom infusion manager module with Dependencies category
+- **wps/** - Updated WPS infusion with VERSION file support
 - **usr/bin/** - Pre-installed packages (htop, nmap, screen)
+- **Pre-built Packages** - Cross-compiled tools for ar71xx (mdk3, aireplay, reaver, bully, pixiewps, p0f, nbtscan)
 
 ### Scripts (`scripts/`)
 - **install-cert.sh** - Auto-install SSL certificate on your computer
@@ -37,8 +39,6 @@ Custom configurations from `/etc/` - non-stock settings:
 4. **Enable SSH:** Go to http://172.16.42.1 → Settings → SSH Enable
 5. **Copy SD card contents:**
    ```bash
-   # Mount your SD card on computer, copy all files from sd-card/ to SD root
-   # Or use SCP after connecting:
    scp -r sd-card/* root@172.16.42.1:/sd/
    ```
 6. **Enable Infusion Manager (CRITICAL):**
@@ -46,14 +46,15 @@ Custom configurations from `/etc/` - non-stock settings:
    ssh root@172.16.42.1
    ln -s /sd/infusionmanager /pineapple/components/infusions/infusionmanager
    ```
-7. **Refresh web UI** - Infusion Manager tile should appear in the sidebar
+7. **Refresh web UI** - Infusion Manager tile should appear
 
-### Option 2: Running System (already configured)
+### Option 2: Running System
 ```bash
 # Copy configs
 scp internal-flash/etc/opkg.conf root@172.16.42.1:/etc/opkg.conf
 scp internal-flash/etc/nginx.conf root@172.16.42.1:/etc/nginx/nginx.conf
 scp internal-flash/etc/ssl/* root@172.16.42.1:/etc/ssl/
+scp internal-flash/etc/rc.local root@172.16.42.1:/etc/rc.local
 
 # Copy SD contents
 scp -r sd-card/* root@172.16.42.1:/sd/
@@ -65,80 +66,58 @@ ssh root@172.16.42.1 "ln -s /sd/infusionmanager /pineapple/components/infusions/
 ssh root@172.16.42.1 "/etc/init.d/nginx restart"
 ```
 
+## Pre-built Packages
+
+This repository includes cross-compiled packages for ar71xx (MIPS):
+
+| Package | Status | Description |
+|---------|--------|-------------|
+| mdk3 | ✅ Ready | WiFi attack tool |
+| aireplay-ng | ✅ Ready | Part of aircrack-ng (aireplay, airmon, airodump) |
+| reaver | ✅ Ready | WPS brute force (v1.6.6) |
+| bully | ✅ Ready | WPS brute force alternative |
+| pixiewps | ✅ Ready | Pixie Dust attack |
+| p0f | ✅ Ready | Passive OS fingerprinting |
+| nbtscan | ✅ Ready | NetBIOS scanner |
+
+### Installing via Infusion Manager
+
+1. Go to **Infusion Manager** in the web UI
+2. Find the **Dependencies** category (orange)
+3. Click **Install** next to any tool
+
+The installer will:
+- Extract the package to `/sd/<name>/`
+- Copy binaries to `/sd/usr/sbin/`
+- Copy VERSION file for version tracking
+- Auto-install dependencies when you install infusions (e.g., installing WPS auto-installs reaver, bully, pixiewps)
+
+### Auto-Dependencies
+
+When you install these infusions, dependencies are auto-installed:
+
+| Infusion | Auto-installs |
+|----------|---------------|
+| deauth | mdk3, aireplay |
+| occupineapple | mdk3, aireplay |
+| wps | reaver, bully, pixiewps |
+| strip-n-inject | sslstrip |
+
 ## OPKG Usage
 
 ```bash
 ssh root@172.16.42.1
 opkg update
-opkg install <package>  # Installs to SD by default
+opkg install <package> --dest sd  # Installs to SD
 ```
 
-## Pen-Testing Tools
-
-The Pineapple's infusion tools (ettercap, sslstrip, nmap, tcpdump, etc.) are bundled in the infusions themselves.
-
-### Pre-built Packages (`packages/`)
-
-This repository includes pre-built packages for ar71xx architecture:
-
-| Package | Status | Notes |
-|---------|--------|-------|
-| mdk3 | ✅ Ready | Built from source for ar71xx |
-| aircrack-ng | ⚠️ Partial | See notes below |
-
-### Installing Pre-built Packages
-
-#### Option 1: Infusion Manager (Recommended)
-
-1. Go to your Pineapple's web interface
-2. Navigate to **Infusion Manager**
-3. Find the **Dependencies** category (orange color)
-4. Click **Install** next to mdk3
-
-The infusion manager will install mdk3 to `/sd/usr/bin/mdk3`.
-
-#### Option 2: Manual
-
-```bash
-# Copy mdk3 to your Pineapple
-scp packages/mdk3 root@172.16.42.1:/sd/usr/bin/
-ssh root@172.16.42.1 "chmod +x /sd/usr/bin/mdk3"
-```
-
-### Known Dependency Issues
-
-Some older tools require additional packages:
-
-| Tool | Infusion | Status | Solution |
-|------|----------|--------|----------|
-| mdk3 | deauth, occupineapple | ✅ Ready | Install via Infusion Manager → Dependencies |
-| aireplay-ng | deauth | ✅ Ready | Install via Infusion Manager → Dependencies |
-| airmon-ng | deauth | ✅ Ready | Install via Infusion Manager → Dependencies |
-| sslstrip | sslstrip, strip-n-inject | ❌ Missing | Requires Python Twisted |
-| nbtscan | nbtscan | ❌ Missing | Needs compilation |
-| hping3 | crafty | ❌ Missing | Needs compilation |
-| p0f | p0f | ❌ Missing | Needs compilation |
-| reaver | wps | ❌ Missing | Needs compilation |
-| bully | wps | ❌ Missing | Needs compilation |
-| pixiewps | wps | ❌ Missing | Needs compilation |
-
-### Building from Source
-
-The OpenWRT SDK (Chaos Calmer 15.05) can be used to build these tools:
-
-1. Download OpenWRT SDK:
-```bash
-wget https://archive.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64.tar.bz2
-```
-
-2. Use the toolchain to cross-compile tools for mips32r2 (ar71xx)
-
-Note: Pre-built packages for mipsel_24kc (newer routers) exist at https://github.com/xiv3r/openwrt-pentest but are NOT compatible with ar71xx.
+**Note:** The Chaos Calmer repo in opkg.conf requires internet access.
 
 ## Default Access
 
 - **HTTP:** http://172.16.42.1
 - **HTTPS:** https://172.16.42.1:1471 (self-signed cert)
+- **SSH:** ssh root@172.16.42.1
 
 ## SSL Certificate
 
@@ -163,3 +142,5 @@ chmod +x install-cert.sh
 - Root filesystem is only 3.1MB - always install packages to SD
 - Default credentials: root/root
 - Network: 172.16.42.1/24
+- Binaries on SD need `/sd/usr/lib` in LD_LIBRARY_PATH (set in rc.local)
+- VERSION files track package versions for update detection
