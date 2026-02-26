@@ -162,6 +162,7 @@ function auto_cleanup_stale_leases() {
     $stale_threshold = 3600;  // 1 hour - if device offline for 1+ hour, it's definitely stale
     
     // Get ARP table for current connected devices
+    // Only count RESOLVED ARP entries (0x2 flags = REACHABLE/STALE, not 0x0 = INCOMPLETE)
     $arp_macs = array();
     $arp_content = file_get_contents('/proc/net/arp');
     if ($arp_content) {
@@ -171,9 +172,10 @@ function auto_cleanup_stale_leases() {
             if (empty($line) || strpos($line, 'IP address') === 0) continue;
             $parts = preg_split('/\s+/', $line);
             if (count($parts) >= 4) {
-                $mac_lower = strtolower($parts[3]);
-                // Only count ARP entries with valid MAC addresses (flags 0x2 = resolved)
-                if (count($parts) >= 3 && strpos($parts[2], '0x2') !== false) {
+                // Check if ARP entry is valid (flags must have 0x2 = REACHABLE/STALE, not 0x0 = INCOMPLETE)
+                $flags = $parts[2];
+                if (strpos($flags, '0x2') !== false) {
+                    $mac_lower = strtolower($parts[3]);
                     $arp_macs[$mac_lower] = true;
                 }
             }
@@ -1508,7 +1510,7 @@ function cleanup_offline_leases() {
     $removed_macs = array();
     
     // Get ARP table for detecting online devices
-    // (iw station dump doesn't work reliably on all systems, especially with bridge configs)
+    // Only count RESOLVED ARP entries (0x2 flags = STALE/REACHABLE, not 0x0 = INCOMPLETE)
     $connected_macs = array();
     $arp_content = file_get_contents('/proc/net/arp');
     if ($arp_content) {
@@ -1517,9 +1519,13 @@ function cleanup_offline_leases() {
             $line = trim($line);
             if (empty($line) || strpos($line, 'IP address') === 0) continue;
             $parts = preg_split('/\s+/', $line);
-            if (count($parts) >= 4) {
-                $mac_lower = strtolower($parts[3]);
-                $connected_macs[$mac_lower] = true;  // MAC => connected
+            if (count($parts) >= 3) {
+                // Check if ARP entry is valid (flags must have 0x2 = REACHABLE/STALE)
+                $flags = $parts[2];
+                if (strpos($flags, '0x2') !== false) {
+                    $mac_lower = strtolower($parts[3]);
+                    $connected_macs[$mac_lower] = true;  // MAC => connected
+                }
             }
         }
     }
