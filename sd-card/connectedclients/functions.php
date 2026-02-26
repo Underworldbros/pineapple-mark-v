@@ -159,8 +159,9 @@ function auto_cleanup_stale_leases() {
     
     $current_time = time();
     $grace_period = 300;  // 5 minutes - devices may not respond to ARP right after standby
+    $stale_threshold = 3600;  // 1 hour - if device offline for 1+ hour, it's definitely stale
     
-    // Get ARP table
+    // Get ARP table for current connected devices
     $arp_macs = array();
     $arp_content = file_get_contents('/proc/net/arp');
     if ($arp_content) {
@@ -171,7 +172,10 @@ function auto_cleanup_stale_leases() {
             $parts = preg_split('/\s+/', $line);
             if (count($parts) >= 4) {
                 $mac_lower = strtolower($parts[3]);
-                $arp_macs[$mac_lower] = true;
+                // Only count ARP entries with valid MAC addresses (flags 0x2 = resolved)
+                if (count($parts) >= 3 && strpos($parts[2], '0x2') !== false) {
+                    $arp_macs[$mac_lower] = true;
+                }
             }
         }
     }
@@ -186,27 +190,36 @@ function auto_cleanup_stale_leases() {
         if (count($parts) >= 2) {
             $expiry_timestamp = (int)$parts[0];
             $mac_lower = strtolower(trim($parts[1]));
+            $is_connected = isset($arp_macs[$mac_lower]);
             
-            // Keep lease if it's still valid
+            // Determine if we should keep this lease
+            $keep_lease = true;
+            
             if ($expiry_timestamp > $current_time) {
-                // Lease hasn't expired yet
-                // Keep if MAC is in ARP (connected) or still within grace period (might come back online soon)
-                if (isset($arp_macs[$mac_lower])) {
-                    $new_lines[] = $line;
-                } else {
-                    // Not in ARP table, but keep within grace period in case device is just waking up
-                    $new_lines[] = $line;
+                // Lease is still VALID (not expired yet)
+                if (!$is_connected) {
+                    // Device is NOT connected, but lease is still valid
+                    // Check if it's been offline too long (> 1 hour) - if so, it's definitely stale
+                    $offline_duration = $current_time - ($expiry_timestamp - 43200); // estimate offline time (assuming 12h default lease)
+                    if ($offline_duration > $stale_threshold) {
+                        // Device has been offline for > 1 hour - it's stale, remove it
+                        $keep_lease = false;
+                        $removed_any = true;
+                    }
                 }
             } else {
-                // Lease has expired
+                // Lease has EXPIRED
                 $offline_duration = $current_time - $expiry_timestamp;
-                // Only remove if offline for more than grace period
+                
                 if ($offline_duration > $grace_period) {
+                    // Device is offline for > 5 minutes after expiry - REMOVE it
+                    $keep_lease = false;
                     $removed_any = true;
-                } else {
-                    // Still within grace period after expiry - keep the lease
-                    $new_lines[] = $line;
                 }
+            }
+            
+            if ($keep_lease) {
+                $new_lines[] = $line;
             }
         }
     }
@@ -1550,8 +1563,12 @@ function cleanup_offline_leases() {
         if ($removed_count > 0) {
             file_put_contents($leases_file, implode("\n", $new_lines) . "\n");
             
-            // Restart dnsmasq to reload
-            exec("killall -HUP dnsmasq 2>/dev/null");
+            // CRITICAL: Kill dnsmasq completely and restart it
+            // Using -HUP (SIGHUP) doesn't clear memory, just reloads config
+            // We need to actually restart the process to clear in-memory leases
+            exec("killall dnsmasq 2>/dev/null");
+            sleep(1);
+            exec("dnsmasq -C /var/etc/dnsmasq.conf 2>/dev/null &");
         }
     }
     
