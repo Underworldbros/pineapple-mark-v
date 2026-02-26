@@ -22,7 +22,7 @@ Custom configurations from `/etc/` - non-stock settings:
 
 ### SD Card Contents (`sd-card/`)
 - **Infusion Tarballs** - All 43+ infusions (*.tar.gz)
-  - **connectedclients-1.4.tar.gz** - DHCP Manager module (2.5MB with OUI database)
+  - **connectedclients-1.5.tar.gz** - DHCP Manager module (2.5MB with OUI database) - v1.5 with configurable renew durations and stale lease filtering
 - **infusionmanager/** - Custom infusion manager module with Dependencies category
 - **wps/** - Updated WPS infusion with VERSION file support
 - **usr/bin/** - Pre-installed packages (htop, nmap, screen)
@@ -67,19 +67,26 @@ ssh root@172.16.42.1 "ln -s /sd/infusionmanager /pineapple/components/infusions/
 ssh root@172.16.42.1 "/etc/init.d/nginx restart"
 ```
 
-## DHCP Manager Module (Connected Clients v1.4)
+## DHCP Manager Module (Connected Clients v1.5)
 
 The **DHCP Manager** infusion provides comprehensive management of DHCP leases, rogue AP configuration, and connected device monitoring.
 
-### Features
+### Features (v1.5)
 
 - **DHCP Dashboard** - Real-time interface status and DHCP pool usage
-- **Lease Management** - View, release, renew, and configure static DHCP leases
-- **Device Discovery** - Real-time monitoring of connected clients across all network interfaces (br-lan, wlan0, wlan0-1)
+- **Lease Management** - View, release, and renew DHCP leases with configurable renewal durations (30 min to 7 days)
+- **Device Discovery** - Real-time monitoring of connected clients across all network interfaces (br-lan, wlan0, wlan0-1) with automatic stale lease filtering
 - **MAC Vendor Lookup** - Comprehensive OUI database (86,098 entries) identifies device manufacturers
 - **Rogue AP Configuration** - Quick switching between home and business network presets
 - **Blacklist Management** - Block specific MAC addresses from connecting
 - **DHCP Ranges & Logs** - View and export DHCP configuration and transaction logs
+
+### What's New in v1.5
+
+- **Configurable Renew Duration** - Select lease renewal duration from dropdown (30 minutes, 1 hour, 2 hours, 4 hours, 8 hours, 12 hours, 24 hours, or 7 days)
+- **Automatic Stale Lease Filtering** - Devices appearing on multiple networks now correctly show only on their actual connected interface
+- **Simplified Lease Management** - Removed redundant Force Refresh button; Release handles all needs
+- **Improved Device Detection** - Uses ARP table for accurate online/offline status detection
 
 ### Quick Start
 
