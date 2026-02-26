@@ -92,12 +92,31 @@ The **DHCP Manager** infusion provides comprehensive management of DHCP leases, 
 
 ### Vendor Lookup
 
-The module includes a pre-cached OUI database with 86,098 MAC vendor entries. You can:
-- **Update vendors automatically** - Click the "Update Vendors" button in the Leases tab (requires internet)
-- **Use cached database** - Pre-populated with common manufacturers (Samsung, Apple, Intel, Cisco, etc.)
-- **View in small tile** - Hover over leases in the compact dashboard view
+The module includes a pre-cached OUI database with 86,098 MAC vendor entries (sources: Samsung, Apple, Intel, Cisco, etc.).
 
-The vendor database is stored at `/sd/connectedclients/oui_cache.txt` and is updated on demand.
+#### Using Vendor Lookup
+
+1. Click **Leases** tab in DHCP Manager
+2. Leases load instantly (without vendor names)
+3. Click **"Load Vendors"** button to populate device manufacturer names
+4. Vendor names appear in the "Vendor" column for each device
+
+#### Updating the OUI Database
+
+The vendor database is manually managed:
+
+1. **Download a fresh OUI list** (from one of these sources):
+   - GitHub: `https://github.com/Ringmast4r/OUI-Master-Database/raw/master/LISTS/master_oui.txt` (86,098 entries)
+   - IEEE: `http://standards-oui.ieee.org/oui/oui.txt` (official but may require different formats)
+
+2. **Upload to pineapple** (via SCP):
+   ```bash
+   scp master_oui.txt root@172.16.42.1:/sd/connectedclients/oui_cache.txt
+   ```
+
+3. **Refresh the module** - Navigate away from Leases tab and back to reload with new vendor data
+
+**Note:** The OUI database is stored at `/sd/connectedclients/oui_cache.txt`. Vendors are loaded on-demand when you click "Load Vendors" button, so the page loads instantly.
 
 ## Pre-built Packages
 
