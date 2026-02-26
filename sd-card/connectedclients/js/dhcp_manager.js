@@ -129,10 +129,11 @@ function dhcp_load_leases() {
                     html += '<div style="font-size:11px;color:#999;margin-top:2px;">Duration: <span style="color:#0af;font-weight:bold;">' + leases[i].lease_duration_readable + '</span></div>';
                     html += '</div>';
                     
-                    // Middle-right: Release/Renew buttons
-                    html += '<div style="flex:0.9;text-align:center;white-space:nowrap;">';
+                    // Middle-right: Release/Renew/Add Static buttons
+                    html += '<div style="flex:1.1;text-align:center;white-space:nowrap;">';
                     html += '<a href="#" onclick="event.stopPropagation(); dhcp_release_lease(\'' + leases[i].mac + '\'); return false;" style="color:#f66;text-decoration:none;font-size:11px;margin-right:6px;"><b>Release</b></a>';
-                    html += '<a href="#" onclick="event.stopPropagation(); dhcp_renew_lease(\'' + leases[i].mac + '\', get_selected_renew_duration()); return false;" style="color:#6f6;text-decoration:none;font-size:11px;"><b>Renew</b></a>';
+                    html += '<a href="#" onclick="event.stopPropagation(); dhcp_renew_lease(\'' + leases[i].mac + '\', get_selected_renew_duration()); return false;" style="color:#6f6;text-decoration:none;font-size:11px;margin-right:6px;"><b>Renew</b></a>';
+                    html += '<a href="#" onclick="event.stopPropagation(); dhcp_add_to_static(\'' + leases[i].mac + '\', \'' + leases[i].ip + '\', \'' + (leases[i].hostname || '') + '\'); return false;" style="color:#0af;text-decoration:none;font-size:11px;"><b>Static</b></a>';
                     html += '</div>';
                     
                     // Right side: Time remaining
@@ -351,6 +352,21 @@ function dhcp_renew_lease(mac, duration) {
     });
 }
 
+function dhcp_add_to_static(mac, ip, hostname) {
+    // Switch to static tab and populate form
+    dhcp_show_tab('static');
+    
+    // Pre-fill the form
+    $('#static_mac').val(mac);
+    $('#static_ip').val(ip);
+    $('#static_hostname').val(hostname);
+    
+    // Show the form
+    $('#add_static_form').show();
+    
+    // Scroll to form
+    $('html, body').animate({scrollTop: 0}, 200);
+}
 
 function dhcp_export_csv() {
     document.getElementById('dhcp_export_csrf').value = $('meta[name=_csrfToken]').attr('content');
