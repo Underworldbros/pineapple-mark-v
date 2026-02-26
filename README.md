@@ -149,6 +149,32 @@ The vendor database is manually updated:
 
 **Note:** The OUI database is stored at `/sd/connectedclients/oui_cache.txt` and includes 86,098 MAC vendor entries. Vendors are loaded on-demand when you click "Load Vendors", so the page loads instantly without waiting for database lookups.
 
+### Static DHCP Leases
+
+You can assign fixed IP addresses to specific devices using static DHCP leases. This is useful for:
+- Always-on servers or network appliances
+- Devices that need consistent IP addresses
+- Testing purposes
+
+#### Adding Static Leases
+
+1. Go to **DHCP Manager** → **Static** tab
+2. Click **"Add Static Lease"** button
+3. Fill in:
+   - **MAC:** Device MAC address (e.g., `aa:bb:cc:dd:ee:ff`)
+   - **IP:** Fixed IP to assign (e.g., `172.16.42.100`)
+   - **Hostname:** (Optional) DNS name for the device
+4. Click **Add**
+5. The device will be assigned the fixed IP on next connection
+
+**Note:** Static leases take effect immediately after creation. If the device is already connected, it may need to release and re-request its lease (renew) to get the static IP.
+
+#### Managing Static Leases
+
+- **View all static leases** - They appear in the **Static** tab with their MAC, IP, and hostname
+- **Delete a lease** - Click **Delete** next to the lease
+- **Configuration file** - Static leases are stored in `/etc/dnsmasq.d/static_dhcp` (editable via SSH if needed)
+
 ## Pre-built Packages
 
 This repository includes cross-compiled packages for ar71xx (MIPS):
