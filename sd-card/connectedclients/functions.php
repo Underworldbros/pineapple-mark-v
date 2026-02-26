@@ -1536,25 +1536,32 @@ function cleanup_offline_leases() {
         
         foreach ($lines as $line) {
             $parts = explode(' ', $line);
-            if (count($parts) >= 2) {
+            if (count($parts) >= 4) {
                 $expiry_timestamp = (int)$parts[0];
                 $mac = trim($parts[1]);
                 $ip = trim($parts[2]);
+                $hostname = trim($parts[3]);
                 $mac_lower = strtolower($mac);
                 
-                // Check if device is currently in ARP table (online)
+                // Check if device is currently in ARP table with VALID flags (0x2)
                 $is_connected = isset($connected_macs[$mac_lower]);
                 
                 // Remove if:
                 // 1. Lease has expired, OR
-                // 2. Device is NOT in ARP table (offline/not connected)
+                // 2. Device is NOT in ARP table with valid flags (offline/not connected), OR
+                // 3. Lease has no hostname (*) AND device not in valid ARP (definitely stale/ghost)
                 if ($expiry_timestamp <= $current_time) {
                     // Lease has expired - remove it
                     $removed_count++;
                     $removed_macs[] = $mac;
                     continue;
+                } elseif ($hostname === '*' && !$is_connected) {
+                    // Device has no hostname AND not in valid ARP - definitely a ghost lease
+                    $removed_count++;
+                    $removed_macs[] = $mac;
+                    continue;
                 } elseif (!$is_connected) {
-                    // Device not in ARP table - it's offline or a stale lease
+                    // Device not in ARP table with valid flags - it's offline or a stale lease
                     $removed_count++;
                     $removed_macs[] = $mac;
                     continue;
