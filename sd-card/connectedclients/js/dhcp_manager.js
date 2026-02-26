@@ -583,6 +583,38 @@ function dhcp_cleanup_offline() {
     });
 }
 
+// Get the selected initial duration from the dropdown
+function get_selected_initial_duration() {
+    var duration = $('#initial_duration').val();
+    return duration ? parseInt(duration) : 43200; // Default to 12 hours
+}
+
+// Handle initial duration change
+function on_initial_duration_change() {
+    var duration = get_selected_initial_duration();
+    console.log('Setting initial lease duration to:', duration);
+    
+    $.post('/components/infusions/connectedclients/functions.php?action=set_initial_duration',
+        { duration: duration, _csrfToken: $('meta[name=_csrfToken]').attr('content') },
+        function(data) {
+            console.log('Initial duration response:', data);
+            try {
+                var response = JSON.parse(data);
+                if (response.error) {
+                    alert('Error: ' + response.error);
+                } else {
+                    alert('Initial DHCP lease duration set to ' + response.duration_display);
+                }
+            } catch(e) {
+                alert('Error: Invalid response');
+            }
+        }
+    ).fail(function(xhr, status, error) {
+        console.log('Initial duration failed:', status, error);
+        alert('Error: ' + error);
+    });
+}
+
 // Get the selected renew duration from the dropdown
 function get_selected_renew_duration() {
     var duration = $('#renew_duration').val();

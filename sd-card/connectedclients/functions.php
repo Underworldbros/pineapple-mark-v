@@ -127,6 +127,9 @@ if (isset($_GET['action'])) {
         case 'export_leases':
             export_leases_csv();
             break;
+        case 'set_initial_duration':
+            echo set_initial_lease_duration($_POST['duration']);
+            break;
     }
 }
 
@@ -153,11 +156,11 @@ function get_leases_without_vendors(){
     $leases_file = '/tmp/dhcp.leases';
     $current_time = time();
     
-    // Get DHCP lease durations from dnsmasq config
-    $lease_duration = 43200;  // Default 12 hours
+    // Get DHCP lease durations from dnsmasq config (fallback)
+    $default_lease_duration = 43200;  // Default 12 hours
     $dhcp_config = file_get_contents('/etc/dnsmasq.conf');
     if (preg_match('/dhcp-lease-max=(\d+)/', $dhcp_config, $matches)) {
-        $lease_duration = (int)$matches[1];
+        $default_lease_duration = (int)$matches[1];
     }
     
     // Get ARP table for online status (read file directly - faster than exec)
@@ -193,6 +196,9 @@ function get_leases_without_vendors(){
                 $mac = trim($parts[1]);
                 $ip = trim($parts[2]);
                 $hostname = count($parts) >= 4 ? trim($parts[3]) : 'unknown';
+                
+                // Get lease duration: stored value (5th field) or use default from dnsmasq config
+                $lease_duration = (count($parts) >= 5 && is_numeric($parts[4])) ? (int)$parts[4] : $default_lease_duration;
                 
                 // Calculate lease info
                 $time_remaining = $expiry_timestamp - $current_time;
@@ -1303,7 +1309,7 @@ function renew_lease($mac){
     
     $new_expiry = time() + $lease_duration;
     
-    // Renew the lease by updating its expiry time
+    // Renew the lease by updating its expiry time and storing the duration
     if (file_exists($leases_file)) {
         $lines = file($leases_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         $new_lines = array();
@@ -1311,8 +1317,14 @@ function renew_lease($mac){
         foreach ($lines as $line) {
             $parts = explode(' ', $line);
             if (count($parts) >= 3 && strtolower(trim($parts[1])) === $mac_lower) {
-                // Found the lease - renew it by updating expiry time
+                // Found the lease - renew it by updating expiry time and duration
                 $parts[0] = $new_expiry;
+                // Store duration as 5th field for future reference
+                if (count($parts) < 5) {
+                    $parts[4] = $lease_duration;
+                } else {
+                    $parts[4] = $lease_duration;
+                }
                 $new_lines[] = implode(' ', $parts);
                 $found = true;
             } else {
@@ -1344,6 +1356,60 @@ function renew_lease($mac){
     }
     
     return json_encode(array('status' => 'renewed', 'mac' => $mac, 'message' => 'Lease renewed for ' . $duration_str));
+}
+
+// Set the initial DHCP lease duration (updates dnsmasq config)
+function set_initial_lease_duration($duration) {
+    // Validate duration is reasonable (30 mins to 30 days)
+    $duration = intval($duration);
+    if ($duration < 1800) $duration = 1800;      // Min 30 minutes
+    if ($duration > 2592000) $duration = 2592000; // Max 30 days
+    
+    // Convert seconds to dnsmasq duration format (e.g., 3600s, 1h, 1d)
+    if ($duration % 86400 === 0) {
+        $duration_str = ($duration / 86400) . 'd';
+    } elseif ($duration % 3600 === 0) {
+        $duration_str = ($duration / 3600) . 'h';
+    } elseif ($duration % 60 === 0) {
+        $duration_str = ($duration / 60) . 'm';
+    } else {
+        $duration_str = $duration . 's';
+    }
+    
+    // Format duration for display
+    if ($duration >= 86400) {
+        $days = floor($duration / 86400);
+        $duration_display = $days . ' day' . ($days > 1 ? 's' : '');
+    } elseif ($duration >= 3600) {
+        $hours = floor($duration / 3600);
+        $duration_display = $hours . ' hour' . ($hours > 1 ? 's' : '');
+    } else {
+        $mins = floor($duration / 60);
+        $duration_display = $mins . ' minute' . ($mins > 1 ? 's' : '');
+    }
+    
+    // Update all dhcp-range entries in dnsmasq config
+    $dhcp_config_file = '/var/etc/dnsmasq.conf';
+    if (file_exists($dhcp_config_file)) {
+        $config = file_get_contents($dhcp_config_file);
+        // Replace all dhcp-range duration values with the new one
+        $config = preg_replace('/dhcp-range=([^,]+),([^,]+),([^,]+),([^,]+),([\d\w]+)/', 
+                              'dhcp-range=$1,$2,$3,$4,' . $duration_str, $config);
+        
+        file_put_contents($dhcp_config_file, $config);
+        
+        // Restart dnsmasq to apply changes
+        exec("killall -HUP dnsmasq 2>/dev/null");
+        
+        return json_encode(array(
+            'status' => 'success',
+            'message' => 'Initial lease duration set to ' . $duration_display,
+            'duration' => $duration,
+            'duration_display' => $duration_display
+        ));
+    }
+    
+    return json_encode(array('error' => 'dnsmasq config file not found'));
 }
 
 // Clean up offline leases (remove expired/stale leases)
