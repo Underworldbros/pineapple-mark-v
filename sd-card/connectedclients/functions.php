@@ -157,6 +157,9 @@ function auto_cleanup_stale_leases() {
         return false;
     }
     
+    $current_time = time();
+    $grace_period = 300;  // 5 minutes - devices may not respond to ARP right after standby
+    
     // Get ARP table
     $arp_macs = array();
     $arp_content = file_get_contents('/proc/net/arp');
@@ -181,12 +184,29 @@ function auto_cleanup_stale_leases() {
     foreach ($lines as $line) {
         $parts = explode(' ', $line);
         if (count($parts) >= 2) {
+            $expiry_timestamp = (int)$parts[0];
             $mac_lower = strtolower(trim($parts[1]));
-            // Keep lease only if MAC is in ARP table
-            if (isset($arp_macs[$mac_lower])) {
-                $new_lines[] = $line;
+            
+            // Keep lease if it's still valid
+            if ($expiry_timestamp > $current_time) {
+                // Lease hasn't expired yet
+                // Keep if MAC is in ARP (connected) or still within grace period (might come back online soon)
+                if (isset($arp_macs[$mac_lower])) {
+                    $new_lines[] = $line;
+                } else {
+                    // Not in ARP table, but keep within grace period in case device is just waking up
+                    $new_lines[] = $line;
+                }
             } else {
-                $removed_any = true;
+                // Lease has expired
+                $offline_duration = $current_time - $expiry_timestamp;
+                // Only remove if offline for more than grace period
+                if ($offline_duration > $grace_period) {
+                    $removed_any = true;
+                } else {
+                    // Still within grace period after expiry - keep the lease
+                    $new_lines[] = $line;
+                }
             }
         }
     }
@@ -206,6 +226,7 @@ function get_leases_without_vendors(){
     $current_time = time();
     
     // Auto-cleanup stale leases before processing
+    // Only removes leases expired for more than 5 minutes (grace period for standby devices)
     auto_cleanup_stale_leases();
     
     // Get DHCP lease durations from dnsmasq config (fallback)

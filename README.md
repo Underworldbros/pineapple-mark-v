@@ -84,9 +84,10 @@ The **DHCP Manager** infusion provides comprehensive management of DHCP leases, 
 ### What's New in v1.5
 
 - **Configurable Renew Duration** - Select lease renewal duration from dropdown (30 minutes, 1 hour, 2 hours, 4 hours, 8 hours, 12 hours, 24 hours, or 7 days)
-- **Automatic Stale Lease Filtering** - Devices appearing on multiple networks now correctly show only on their actual connected interface
-- **Simplified Lease Management** - Removed redundant Force Refresh button; Release handles all needs
-- **Improved Device Detection** - Uses ARP table for accurate online/offline status detection
+- **Configurable Initial Lease Duration** - Adjust DHCP lease timeout in tab header (30 minutes to 7 days, default 12 hours)
+- **Smart Stale Lease Cleanup** - Automatic removal of expired leases with 5-minute grace period (prevents issues with devices waking from standby)
+- **Automatic Device Detection** - Devices appearing on multiple networks now correctly show only on their actual connected interface
+- **Improved Online Status** - Uses ARP table and lease expiry tracking for accurate device connectivity detection
 
 ### Quick Start
 
@@ -211,6 +212,30 @@ curl -O https://raw.githubusercontent.com/Underworldbros/pineapple-mark-v/main/s
 chmod +x install-cert.sh
 ./install-cert.sh
 ```
+
+## Known Issues & Troubleshooting
+
+### WiFi Connection Issues After Device Standby
+
+**Issue:** Phones connecting to the rogue AP (wlan0) fail to reconnect after standby/sleep, especially with MAC randomization enabled.
+
+**Root Cause:** The hostapd configuration includes `disassoc_low_ack=1` on wlan0, which automatically disconnects clients when frame ACK rates drop. This is too aggressive for devices that:
+- Use MAC randomization (phones with privacy features)
+- Have intermittent connectivity after waking from standby
+- Reconnect with a different MAC address
+
+**Solution:** Modify `/var/run/hostapd-phy0.conf`:
+```bash
+# Change disassoc_low_ack from 1 to 0 on wlan0 (rogue AP)
+sed -i '0,/disassoc_low_ack=1/{/^interface=wlan0$/,/^$/s/disassoc_low_ack=1/disassoc_low_ack=0/}' /var/run/hostapd-phy0.conf
+
+# Restart hostapd
+killall hostapd
+sleep 2
+hostapd -P /var/run/wifi-phy0.pid -B /var/run/hostapd-phy0.conf
+```
+
+**Note:** Keep `disassoc_low_ack=1` on the legitimate AP (wlan0-1) to prevent spam clients.
 
 ## Notes
 
