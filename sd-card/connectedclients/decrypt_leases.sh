@@ -16,7 +16,8 @@ OUT_FILE="/tmp/static_dhcp_hosts"
 [ ! -f "$LEASE_FILE" ] && exit 0
 [ ! -s "$LEASE_FILE" ] && exit 0
 
-KEY=$(grep "^root:" /etc/shadow | cut -d: -f2 | md5sum | cut -c1-32)
+_ROOT_HASH=$(grep "^root:" /etc/shadow | cut -d: -f2)
+KEY=$(printf '%s' "$_ROOT_HASH" | md5sum | cut -c1-32)
 
 awk -v key="$KEY" '
 function hex2dec(h,    digits, i, val) {
