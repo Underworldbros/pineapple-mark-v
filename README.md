@@ -87,8 +87,12 @@ The **DHCP Manager** infusion provides comprehensive management of DHCP leases, 
 2. Click the **DHCP Manager** tile in the web UI
 3. To identify device vendors:
    - Go to **DHCP Manager** → **Leases** tab
-   - Click **"Update Vendors"** button to download the latest OUI database
-   - Vendors will automatically appear for all connected devices
+   - Leases load instantly
+   - Click **"Load Vendors"** button to show device manufacturer names
+   - Vendor status appears in the "Vendor" column:
+     - **Device name** = Recognized manufacturer (Samsung, Apple, ASUS, etc.)
+     - **🔒 Randomized** = MAC randomization enabled (privacy feature)
+     - **❓ Not found** = Real OUI but not in database
 
 ### Vendor Lookup
 
@@ -97,26 +101,38 @@ The module includes a pre-cached OUI database with 86,098 MAC vendor entries (so
 #### Using Vendor Lookup
 
 1. Click **Leases** tab in DHCP Manager
-2. Leases load instantly (without vendor names)
-3. Click **"Load Vendors"** button to populate device manufacturer names
-4. Vendor names appear in the "Vendor" column for each device
+2. Leases load instantly without vendor names (fast!)
+3. Click **"Load Vendors"** button to asynchronously populate device manufacturer names
+4. Vendor status appears for each device:
+   - **Recognized vendors** = Device manufacturer name (Samsung, Apple, ASUS, Intel, etc.)
+   - **🔒 Randomized** = Device uses MAC address randomization (common on modern phones for privacy)
+   - **❓ Not found** = Real OUI prefix but not in the 86,098-entry database
+
+#### Understanding Vendor Status
+
+- **Vendor Name Found** - Device is using its real MAC address and matches OUI database
+- **🔒 Randomized** - Device intentionally changes its MAC for privacy (modern iPhones, Android phones)
+  - These are not real manufacturer OUIs, so they'll never be identified
+  - This is a security feature, not a bug
+- **❓ Not Found** - Device uses real MAC but manufacturer not in current database (add new OUI file to fix)
 
 #### Updating the OUI Database
 
-The vendor database is manually managed:
+The vendor database is manually updated:
 
-1. **Download a fresh OUI list** (from one of these sources):
-   - GitHub: `https://github.com/Ringmast4r/OUI-Master-Database/raw/master/LISTS/master_oui.txt` (86,098 entries)
-   - IEEE: `http://standards-oui.ieee.org/oui/oui.txt` (official but may require different formats)
+1. **Download a fresh OUI list**:
+   ```bash
+   curl -O https://github.com/Ringmast4r/OUI-Master-Database/raw/master/LISTS/master_oui.txt
+   ```
 
-2. **Upload to pineapple** (via SCP):
+2. **Upload to pineapple** (replace the cached OUI file):
    ```bash
    scp master_oui.txt root@172.16.42.1:/sd/connectedclients/oui_cache.txt
    ```
 
-3. **Refresh the module** - Navigate away from Leases tab and back to reload with new vendor data
+3. **Refresh the module** - Navigate away from Leases tab and back to reload vendor data
 
-**Note:** The OUI database is stored at `/sd/connectedclients/oui_cache.txt`. Vendors are loaded on-demand when you click "Load Vendors" button, so the page loads instantly.
+**Note:** The OUI database is stored at `/sd/connectedclients/oui_cache.txt` and includes 86,098 MAC vendor entries. Vendors are loaded on-demand when you click "Load Vendors", so the page loads instantly without waiting for database lookups.
 
 ## Pre-built Packages
 
