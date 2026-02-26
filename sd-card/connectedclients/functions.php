@@ -1647,100 +1647,131 @@ function cleanup_offline_leases() {
     ));
 }
 
-// Get static DHCP leases
-function get_static_leases(){
-    $leases = array();
-    $static_file = '/etc/dnsmasq.d/static_dhcp';
-    
-    if (file_exists($static_file)) {
-        $lines = file($static_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        foreach ($lines as $line) {
-            if (strpos($line, 'dhcp-host=') === 0) {
-                $parts = explode(',', str_replace('dhcp-host=', '', $line));
-                if (count($parts) >= 2) {
-                    $leases[] = array(
-                        'mac' => trim($parts[0]),
-                        'ip' => trim($parts[1]),
-                        'hostname' => isset($parts[2]) ? trim($parts[2]) : ''
-                    );
-                }
-            }
+// ============================================================================
+// STATIC LEASE HELPERS - XOR encryption, stored on SD card
+// Key = MD5 of root shadow hash. Key bytes = ASCII of each hex char in MD5.
+// Each lease line is encrypted and stored as a hex string in static_leases.dat
+// ============================================================================
+
+function static_lease_key() {
+    $shadow = file_get_contents('/etc/shadow');
+    foreach (explode("\n", $shadow) as $line) {
+        if (strpos($line, 'root:') === 0) {
+            $parts = explode(':', $line);
+            $hash = isset($parts[1]) ? $parts[1] : 'defaultkey';
+            return md5($hash);  // 32 hex chars
         }
     }
-    
-    return json_encode($leases);
+    return md5('defaultkey');
+}
+
+function static_xor($text, $key) {
+    $out = '';
+    $klen = strlen($key);
+    for ($i = 0; $i < strlen($text); $i++) {
+        $kc = $key[$i % $klen];
+        // Key byte = ASCII of hex character (0-9 = 48-57, a-f = 97-102)
+        $kval = ord($kc);
+        $out .= chr(ord($text[$i]) ^ $kval);
+    }
+    return $out;
+}
+
+function static_encrypt($plaintext) {
+    $key = static_lease_key();
+    return bin2hex(static_xor($plaintext, $key));
+}
+
+function static_decrypt($hexline) {
+    $key = static_lease_key();
+    $binary = pack('H*', $hexline);
+    return static_xor($binary, $key);
+}
+
+function static_lease_file() {
+    return '/sd/connectedclients/static_leases.dat';
+}
+
+function static_read_all() {
+    $file = static_lease_file();
+    $leases = array();
+    if (!file_exists($file) || !filesize($file)) return $leases;
+    $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $hexline) {
+        $plain = static_decrypt(trim($hexline));
+        // format: mac,ip,hostname
+        $parts = explode(',', $plain);
+        if (count($parts) >= 2 && is_valid_mac(trim($parts[0]))) {
+            $leases[] = array(
+                'mac'      => trim($parts[0]),
+                'ip'       => trim($parts[1]),
+                'hostname' => isset($parts[2]) ? trim($parts[2]) : ''
+            );
+        }
+    }
+    return $leases;
+}
+
+function static_write_all($leases) {
+    $file = static_lease_file();
+    $out = '';
+    foreach ($leases as $l) {
+        $plain = $l['mac'] . ',' . $l['ip'] . (isset($l['hostname']) && $l['hostname'] ? ',' . $l['hostname'] : '');
+        $out .= static_encrypt($plain) . "\n";
+    }
+    return file_put_contents($file, $out) !== false;
+}
+
+// Get static DHCP leases
+function get_static_leases() {
+    return json_encode(static_read_all());
 }
 
 // Add a static DHCP lease
-function add_static_lease($mac, $ip, $hostname){
-    if (!is_valid_mac($mac)) {
+function add_static_lease($mac, $ip, $hostname) {
+    if (!is_valid_mac($mac))
         return json_encode(array('error' => 'Invalid MAC address format'));
-    }
-    if (!is_valid_ipv4($ip)) {
+    if (!is_valid_ipv4($ip))
         return json_encode(array('error' => 'Invalid IPv4 address'));
-    }
     if ($hostname) {
-        if (!is_valid_hostname($hostname)) {
+        if (!is_valid_hostname($hostname))
             return json_encode(array('error' => 'Invalid hostname format'));
-        }
         $hostname = sanitize_hostname($hostname);
     }
 
-    $static_file = '/etc/dnsmasq.d/static_dhcp';
-    if (file_exists($static_file)) {
-        $lines = file($static_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        foreach ($lines as $line) {
-            if (strpos($line, 'dhcp-host=' . $mac . ',') === 0) {
-                return json_encode(array('error' => 'Static lease already exists for this MAC'));
-            }
-        }
+    $leases = static_read_all();
+    foreach ($leases as $l) {
+        if (strcasecmp($l['mac'], $mac) === 0)
+            return json_encode(array('error' => 'Static lease already exists for this MAC'));
     }
 
-    $entry = "dhcp-host=" . $mac . "," . $ip . ($hostname ? "," . $hostname : "") . "\n";
-    if (!file_put_contents($static_file, $entry, FILE_APPEND)) {
-        return json_encode(array('error' => 'Failed to write static lease'));
-    }
+    $leases[] = array('mac' => $mac, 'ip' => $ip, 'hostname' => $hostname);
+    if (!static_write_all($leases))
+        return json_encode(array('error' => 'Failed to write static_leases.dat'));
 
     exec("killall -HUP dnsmasq 2>/dev/null");
     return json_encode(array('status' => 'added', 'mac' => $mac, 'ip' => $ip));
 }
 
 // Delete a static DHCP lease
-function delete_static_lease($mac){
-    // Validate MAC address
-    if (!is_valid_mac($mac)) {
+function delete_static_lease($mac) {
+    if (!is_valid_mac($mac))
         return json_encode(array('error' => 'Invalid MAC address format'));
-    }
-    
-    $static_file = '/etc/dnsmasq.d/static_dhcp';
+
+    $leases = static_read_all();
+    $new = array();
     $found = false;
-    
-    if (file_exists($static_file)) {
-        $lines = file($static_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $new_lines = array();
-        
-        foreach ($lines as $line) {
-            // Check if this line is for our MAC (exact match for dhcp-host=MAC,...)
-            if (preg_match('/^dhcp-host=' . preg_quote($mac) . ',/', $line)) {
-                $found = true;
-                continue;  // Skip this line (delete it)
-            }
-            $new_lines[] = $line;
-        }
-        
-        if ($found) {
-            // Only write if we found and removed an entry
-            if (!file_put_contents($static_file, implode("\n", $new_lines) . "\n")) {
-                return json_encode(array('error' => 'Failed to write static lease file'));
-            }
-            exec("killall -HUP dnsmasq 2>/dev/null", $output, $return_code);
-        }
+    foreach ($leases as $l) {
+        if (strcasecmp($l['mac'], $mac) === 0) { $found = true; continue; }
+        $new[] = $l;
     }
-    
-    if (!$found) {
+    if (!$found)
         return json_encode(array('error' => 'Static lease not found for this MAC'));
-    }
-    
+
+    if (!static_write_all($new))
+        return json_encode(array('error' => 'Failed to write static_leases.dat'));
+
+    exec("killall -HUP dnsmasq 2>/dev/null");
     return json_encode(array('status' => 'deleted', 'mac' => $mac));
 }
 
