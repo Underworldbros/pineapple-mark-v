@@ -880,12 +880,12 @@ function get_mac_vendor($mac) {
     $oui_file = '/sd/connectedclients/oui_cache.txt';
     if (!file_exists($oui_file)) return 'Unknown';
 
-    // Build grep prefix in both formats (e.g. "04:92:26" -> "049226" and "04-92-26")
-    $prefix_plain = strtoupper(str_replace(':', '', substr($mac, 0, 8)));
-    $prefix_dash  = strtoupper(str_replace(':', '-', substr($mac, 0, 8)));
+    // OUI file format: "XXXXXX\tVendor" (6 uppercase hex chars, no separators)
+    // MAC is already validated, so no shell injection risk
+    $prefix = strtoupper(str_replace(':', '', substr($mac, 0, 8)));
 
     $result = array();
-    exec('grep -m1 -i "^' . escapeshellarg($prefix_plain) . '\|^' . escapeshellarg($prefix_dash) . '" ' . escapeshellarg($oui_file) . ' 2>/dev/null', $result);
+    exec('grep -m1 "^' . $prefix . '" ' . escapeshellarg($oui_file) . ' 2>/dev/null', $result);
 
     if (!empty($result[0])) {
         $parts = preg_split('/\s+/', trim($result[0]), 2);

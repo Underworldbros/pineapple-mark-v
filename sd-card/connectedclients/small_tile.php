@@ -101,8 +101,8 @@ setTimeout(function() {
     get_leases_detail();
 }, 500);
 
-// Auto-refresh every 5 seconds
+// Auto-refresh every 30 seconds (reduce CPU/memory pressure on low-RAM device)
 setInterval(function() { 
     get_leases_detail();
-}, 5000);
+}, 30000);
 </script>
