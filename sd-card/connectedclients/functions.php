@@ -150,11 +150,63 @@ function check_mac_on_wlan0_1($mac) {
     return !empty($output);
 }
 
+// Auto-cleanup stale leases with no ARP entry
+function auto_cleanup_stale_leases() {
+    $leases_file = '/tmp/dhcp.leases';
+    if (!file_exists($leases_file)) {
+        return false;
+    }
+    
+    // Get ARP table
+    $arp_macs = array();
+    $arp_content = file_get_contents('/proc/net/arp');
+    if ($arp_content) {
+        $arp_lines = explode("\n", $arp_content);
+        foreach ($arp_lines as $line) {
+            $line = trim($line);
+            if (empty($line) || strpos($line, 'IP address') === 0) continue;
+            $parts = preg_split('/\s+/', $line);
+            if (count($parts) >= 4) {
+                $mac_lower = strtolower($parts[3]);
+                $arp_macs[$mac_lower] = true;
+            }
+        }
+    }
+    
+    // Check leases against ARP table
+    $lines = file($leases_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $new_lines = array();
+    $removed_any = false;
+    
+    foreach ($lines as $line) {
+        $parts = explode(' ', $line);
+        if (count($parts) >= 2) {
+            $mac_lower = strtolower(trim($parts[1]));
+            // Keep lease only if MAC is in ARP table
+            if (isset($arp_macs[$mac_lower])) {
+                $new_lines[] = $line;
+            } else {
+                $removed_any = true;
+            }
+        }
+    }
+    
+    // Write back if we removed anything
+    if ($removed_any && count($new_lines) > 0) {
+        file_put_contents($leases_file, implode("\n", $new_lines) . "\n");
+        return true;
+    }
+    return false;
+}
+
 // Get leases WITHOUT vendor lookup (fast load) - includes wireless and ARP data
 function get_leases_without_vendors(){
     $leases = array();
     $leases_file = '/tmp/dhcp.leases';
     $current_time = time();
+    
+    // Auto-cleanup stale leases before processing
+    auto_cleanup_stale_leases();
     
     // Get DHCP lease durations from dnsmasq config (fallback)
     $default_lease_duration = 43200;  // Default 12 hours
