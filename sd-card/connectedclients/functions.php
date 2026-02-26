@@ -241,8 +241,9 @@ function get_leases_without_vendors(){
     $current_time = time();
     
     // Auto-cleanup stale leases before processing
-    // Only removes leases expired for more than 5 minutes (grace period for standby devices)
-    auto_cleanup_stale_leases();
+    // DISABLED - User needs to see all leases including offline ones to track what happened
+    // Use "Cleanup Offline" button to manually remove when needed
+    // auto_cleanup_stale_leases();
     
     // Get DHCP lease durations from dnsmasq config (fallback)
     $default_lease_duration = 43200;  // Default 12 hours
@@ -1371,8 +1372,11 @@ function release_lease($mac){
         
         if ($found) {
             file_put_contents($leases_file, implode("\n", $new_lines) . "\n");
-            // Restart dnsmasq to reload
-            exec("killall -HUP dnsmasq 2>/dev/null");
+            // CRITICAL: Kill and fully restart dnsmasq to clear memory
+            // -HUP only reloads config, doesn't clear lease cache
+            exec("killall dnsmasq 2>/dev/null");
+            sleep(1);
+            exec("dnsmasq -C /var/etc/dnsmasq.conf 2>/dev/null &");
         }
     }
     
