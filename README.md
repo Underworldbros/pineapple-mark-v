@@ -22,6 +22,7 @@ Custom configurations from `/etc/` - non-stock settings:
 
 ### SD Card Contents (`sd-card/`)
 - **Infusion Tarballs** - All 43+ infusions (*.tar.gz)
+  - **connectedclients-1.4.tar.gz** - DHCP Manager module (2.5MB with OUI database)
 - **infusionmanager/** - Custom infusion manager module with Dependencies category
 - **wps/** - Updated WPS infusion with VERSION file support
 - **usr/bin/** - Pre-installed packages (htop, nmap, screen)
@@ -65,6 +66,38 @@ ssh root@172.16.42.1 "ln -s /sd/infusionmanager /pineapple/components/infusions/
 # Restart services
 ssh root@172.16.42.1 "/etc/init.d/nginx restart"
 ```
+
+## DHCP Manager Module (Connected Clients v1.4)
+
+The **DHCP Manager** infusion provides comprehensive management of DHCP leases, rogue AP configuration, and connected device monitoring.
+
+### Features
+
+- **DHCP Dashboard** - Real-time interface status and DHCP pool usage
+- **Lease Management** - View, release, renew, and configure static DHCP leases
+- **Device Discovery** - Real-time monitoring of connected clients across all network interfaces (br-lan, wlan0, wlan0-1)
+- **MAC Vendor Lookup** - Comprehensive OUI database (86,098 entries) identifies device manufacturers
+- **Rogue AP Configuration** - Quick switching between home and business network presets
+- **Blacklist Management** - Block specific MAC addresses from connecting
+- **DHCP Ranges & Logs** - View and export DHCP configuration and transaction logs
+
+### Quick Start
+
+1. Install the module via Infusion Manager
+2. Click the **DHCP Manager** tile in the web UI
+3. To identify device vendors:
+   - Go to **DHCP Manager** → **Leases** tab
+   - Click **"Update Vendors"** button to download the latest OUI database
+   - Vendors will automatically appear for all connected devices
+
+### Vendor Lookup
+
+The module includes a pre-cached OUI database with 86,098 MAC vendor entries. You can:
+- **Update vendors automatically** - Click the "Update Vendors" button in the Leases tab (requires internet)
+- **Use cached database** - Pre-populated with common manufacturers (Samsung, Apple, Intel, Cisco, etc.)
+- **View in small tile** - Hover over leases in the compact dashboard view
+
+The vendor database is stored at `/sd/connectedclients/oui_cache.txt` and is updated on demand.
 
 ## Pre-built Packages
 
