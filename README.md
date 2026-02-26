@@ -17,12 +17,14 @@ Custom configurations from `/etc/` - non-stock settings:
 - **etc/ssl/** - SSL certificate and private key
 - **etc/config/pineap** - PineAP settings
 - **etc/config/system** - System config (hostname, timezone)
+- **etc/config/wireless** - WiFi config with `disassoc_low_ack 0` on rogue AP
+- **etc/init.d/php5-fastcgi** - PHP worker count reduced to 1 (saves ~18MB RAM)
 - **etc/pineapple/mk5.db** - Pineapple database
 - **etc/pineapple/tracking_script** - Custom tracking script
 
 ### SD Card Contents (`sd-card/`)
 - **Infusion Tarballs** - All 43+ infusions (*.tar.gz)
-  - **connectedclients-1.5.tar.gz** - DHCP Manager module (2.5MB with OUI database) - v1.5 with configurable renew durations and stale lease filtering
+  - **connectedclients-1.5.tar.gz** - DHCP Manager module with OUI database
 - **infusionmanager/** - Custom infusion manager module with Dependencies category
 - **wps/** - Updated WPS infusion with VERSION file support
 - **usr/bin/** - Pre-installed packages (htop, nmap, screen)
@@ -47,7 +49,12 @@ Custom configurations from `/etc/` - non-stock settings:
    ssh root@172.16.42.1
    ln -s /sd/infusionmanager /pineapple/components/infusions/infusionmanager
    ```
-7. **Refresh web UI** - Infusion Manager tile should appear
+7. **Apply internal flash configs:**
+   ```bash
+   scp internal-flash/etc/init.d/php5-fastcgi root@172.16.42.1:/etc/init.d/php5-fastcgi
+   ssh root@172.16.42.1 "/etc/init.d/php5-fastcgi restart"
+   ```
+8. **Refresh web UI** - Infusion Manager tile should appear
 
 ### Option 2: Running System
 ```bash
@@ -56,6 +63,7 @@ scp internal-flash/etc/opkg.conf root@172.16.42.1:/etc/opkg.conf
 scp internal-flash/etc/nginx.conf root@172.16.42.1:/etc/nginx/nginx.conf
 scp internal-flash/etc/ssl/* root@172.16.42.1:/etc/ssl/
 scp internal-flash/etc/rc.local root@172.16.42.1:/etc/rc.local
+scp internal-flash/etc/init.d/php5-fastcgi root@172.16.42.1:/etc/init.d/php5-fastcgi
 
 # Copy SD contents
 scp -r sd-card/* root@172.16.42.1:/sd/
@@ -64,8 +72,18 @@ scp -r sd-card/* root@172.16.42.1:/sd/
 ssh root@172.16.42.1 "ln -s /sd/infusionmanager /pineapple/components/infusions/infusionmanager"
 
 # Restart services
-ssh root@172.16.42.1 "/etc/init.d/nginx restart"
+ssh root@172.16.42.1 "/etc/init.d/nginx restart && /etc/init.d/php5-fastcgi restart"
 ```
+
+### Post-install: Static Lease Support
+Wire dnsmasq to pick up static leases on boot:
+```bash
+ssh root@172.16.42.1
+grep -q 'dhcp-hostsfile' /var/etc/dnsmasq.conf || echo 'dhcp-hostsfile=/tmp/static_dhcp_hosts' >> /var/etc/dnsmasq.conf
+/sd/connectedclients/decrypt_leases.sh
+```
+
+---
 
 ## DHCP Manager Module (Connected Clients v1.5)
 
@@ -74,136 +92,98 @@ The **DHCP Manager** infusion provides comprehensive management of DHCP leases, 
 ### Features (v1.5)
 
 - **DHCP Dashboard** - Real-time interface status and DHCP pool usage
-- **Lease Management** - View, release, and renew DHCP leases with configurable renewal durations (30 min to 7 days)
-- **Device Discovery** - Real-time monitoring of connected clients across all network interfaces (br-lan, wlan0, wlan0-1) with automatic stale lease filtering
-- **MAC Vendor Lookup** - Comprehensive OUI database (86,098 entries) identifies device manufacturers
-- **Rogue AP Configuration** - Quick switching between home and business network presets
-- **Blacklist Management** - Block specific MAC addresses from connecting
+- **Lease Management** - View, release, and renew DHCP leases with configurable durations (30 min to 7 days)
+- **Device Discovery** - Real-time monitoring across all interfaces (br-lan, wlan0, wlan0-1) with ARP-based online/offline detection
+- **MAC Vendor Lookup** - 86,098-entry OUI database via `grep` (on-demand, not loaded into memory)
+- **Static DHCP Leases** - Assign fixed IPs to devices, stored encrypted on SD card
+- **Rogue AP Configuration** - Quick network preset switching
+- **Blacklist Management** - Block specific MAC addresses
 - **DHCP Ranges & Logs** - View and export DHCP configuration and transaction logs
 
 ### What's New in v1.5
 
 **Features:**
+- **Static DHCP Leases** - Add/delete fixed IP assignments; stored XOR-encrypted on SD card, decrypted by shell script for dnsmasq
 - **Configurable Renew Duration** - Select lease renewal duration from dropdown (30 min to 7 days)
-- **Configurable Initial Lease Duration** - Adjust DHCP lease timeout in tab header (30 min to 7 days, default 12h)
-- **Full Lease Visibility** - All leases shown with online/offline status (no auto-hiding)
-- **Manual Cleanup Button** - "Cleanup Offline" button fully restarts dnsmasq to remove stale leases
+- **Configurable Initial Lease Duration** - Adjust DHCP lease timeout (30 min to 7 days, default 12h)
+- **Full Lease Visibility** - All leases shown with accurate online/offline status
+- **Manual Cleanup Button** - Fully restarts dnsmasq to clear ghost leases
 
 **Bug Fixes:**
-- **Fixed Rogue AP reconnection** - Disabled aggressive `disassoc_low_ack` on wlan0 to allow MAC randomization
-- **Fixed lease release** - Now fully restarts dnsmasq instead of reload-only (prevents ghost leases)
-- **Fixed online/offline detection** - Checks ARP flags (0x2 = online, 0x0 = offline)
-- **Fixed duplicate WiFi leases** - Devices on wlan0-1 no longer duplicate on br-lan
-- **Fixed stale lease cleanup** - Only removes truly offline devices from leases file
+- **Fixed Rogue AP reconnection** - Disabled `disassoc_low_ack` on wlan0; allows MAC randomization
+- **Fixed lease release** - Full dnsmasq restart instead of SIGHUP (prevents ghost leases)
+- **Fixed online/offline detection** - Checks ARP flags (0x2 = online, 0x0 = offline/incomplete)
+- **Fixed duplicate WiFi leases** - Devices on wlan0-1 no longer appear on br-lan
+- **Fixed IP validation** - Replaced `filter_var()` (unavailable on this PHP build) with regex
+- **Fixed OUI grep** - Corrected shell escaping that prevented vendor matches
 
-### Quick Start
-
-1. Install the module via Infusion Manager
-2. Click the **DHCP Manager** tile in the web UI
-3. To identify device vendors:
-   - Go to **DHCP Manager** → **Leases** tab
-   - Leases load instantly
-   - Click **"Load Vendors"** button to show device manufacturer names
-   - Vendor status appears in the "Vendor" column:
-     - **Device name** = Recognized manufacturer (Samsung, Apple, ASUS, etc.)
-     - **🔒 Randomized** = MAC randomization enabled (privacy feature)
-     - **❓ Not found** = Real OUI but not in database
+**Performance:**
+- **OUI lookup** - Single `grep` call instead of PHP line-by-line file scan (no memory spike)
+- **Removed vendor lookup from lease polling** - Vendors only loaded on explicit button press
+- **PHP workers reduced to 1** - Saves ~18MB RAM (from 3 workers to 1 in php5-fastcgi)
+- **Small tile poll interval** - Increased from 5s to 30s (6x fewer PHP invocations)
 
 ### Vendor Lookup
 
-The module includes a pre-cached OUI database with 86,098 MAC vendor entries (sources: Samsung, Apple, Intel, Cisco, etc.).
+The module includes a pre-cached OUI database at `/sd/connectedclients/oui_cache.txt` (86,098 entries).
 
-#### Using Vendor Lookup
-
-1. Click **Leases** tab in DHCP Manager
-2. Leases load instantly without vendor names (fast!)
-3. Click **"Load Vendors"** button to asynchronously populate device manufacturer names
-4. Vendor status appears for each device:
-   - **Recognized vendors** = Device manufacturer name (Samsung, Apple, ASUS, Intel, etc.)
-   - **🔒 Randomized** = Device uses MAC address randomization (common on modern phones for privacy)
-   - **❓ Not found** = Real OUI prefix but not in the 86,098-entry database
-
-#### Understanding Vendor Status
-
-- **Vendor Name Found** - Device is using its real MAC address and matches OUI database
-- **🔒 Randomized** - Device intentionally changes its MAC for privacy (modern iPhones, Android phones)
-  - These are not real manufacturer OUIs, so they'll never be identified
-  - This is a security feature, not a bug
-- **❓ Not Found** - Device uses real MAC but manufacturer not in current database (add new OUI file to fix)
+- Vendors are **not** loaded on page load - click **"Load Vendors"** on the Leases tab
+- Each lookup is a single `grep` against the file - no memory overhead
+- **Randomized** = locally administered MAC bit set (modern phones with MAC privacy)
+- **Unknown** = real OUI not in database
 
 #### Updating the OUI Database
-
-The vendor database is manually updated:
-
-1. **Download a fresh OUI list**:
-   ```bash
-   curl -O https://github.com/Ringmast4r/OUI-Master-Database/raw/master/LISTS/master_oui.txt
-   ```
-
-2. **Upload to pineapple** (replace the cached OUI file):
-   ```bash
-   scp master_oui.txt root@172.16.42.1:/sd/connectedclients/oui_cache.txt
-   ```
-
-3. **Refresh the module** - Navigate away from Leases tab and back to reload vendor data
-
-**Note:** The OUI database is stored at `/sd/connectedclients/oui_cache.txt` and includes 86,098 MAC vendor entries. Vendors are loaded on-demand when you click "Load Vendors", so the page loads instantly without waiting for database lookups.
+```bash
+curl -O https://github.com/Ringmast4r/OUI-Master-Database/raw/master/LISTS/master_oui.txt
+scp master_oui.txt root@172.16.42.1:/sd/connectedclients/oui_cache.txt
+```
 
 ### Static DHCP Leases
 
-You can assign fixed IP addresses to specific devices using static DHCP leases. This is useful for:
-- Always-on servers or network appliances
-- Devices that need consistent IP addresses
-- Testing purposes
+Assign fixed IPs to specific devices. Leases survive reboots via encrypted SD card storage.
 
-#### Adding Static Leases
+**How it works:**
+- PHP encrypts each lease (XOR with MD5 of root password hash) and appends to `/sd/connectedclients/static_leases.dat`
+- `/sd/connectedclients/decrypt_leases.sh` decrypts at runtime → outputs `dhcp-host=` lines to `/tmp/static_dhcp_hosts`
+- dnsmasq reads `/tmp/static_dhcp_hosts` via `dhcp-hostsfile` directive
 
+**Adding a static lease:**
 1. Go to **DHCP Manager** → **Static** tab
-2. Click **"Add Static Lease"** button
-3. Fill in:
-   - **MAC:** Device MAC address (e.g., `aa:bb:cc:dd:ee:ff`)
-   - **IP:** Fixed IP to assign (e.g., `172.16.42.100`)
-   - **Hostname:** (Optional) DNS name for the device
-4. Click **Add**
-5. The device will be assigned the fixed IP on next connection
+2. Click **"Add Static Lease"**
+3. Enter MAC, IP, and optional hostname → click **Add**
+4. dnsmasq reloads automatically
 
-**Note:** Static leases take effect immediately after creation. If the device is already connected, it may need to release and re-request its lease (renew) to get the static IP.
+**Manual SSH management:**
+```bash
+# View decrypted leases
+/sd/connectedclients/decrypt_leases.sh && cat /tmp/static_dhcp_hosts
 
-#### Managing Static Leases
+# Clear all static leases
+echo -n > /sd/connectedclients/static_leases.dat
+```
 
-- **View all static leases** - They appear in the **Static** tab with their MAC, IP, and hostname
-- **Delete a lease** - Click **Delete** next to the lease
-- **Configuration file** - Static leases are stored in `/etc/dnsmasq.d/static_dhcp` (editable via SSH if needed)
+---
 
 ## Pre-built Packages
 
-This repository includes cross-compiled packages for ar71xx (MIPS):
+Cross-compiled packages for ar71xx (MIPS):
 
 | Package | Status | Description |
 |---------|--------|-------------|
-| mdk3 | ✅ Ready | WiFi attack tool |
-| aireplay-ng | ✅ Ready | Part of aircrack-ng (aireplay, airmon, airodump) |
-| reaver | ✅ Ready | WPS brute force (v1.6.6) |
-| bully | ✅ Ready | WPS brute force alternative |
-| pixiewps | ✅ Ready | Pixie Dust attack |
-| p0f | ✅ Ready | Passive OS fingerprinting |
-| nbtscan | ✅ Ready | NetBIOS scanner |
+| mdk3 | Ready | WiFi attack tool |
+| aireplay-ng | Ready | Part of aircrack-ng |
+| reaver | Ready | WPS brute force (v1.6.6) |
+| bully | Ready | WPS brute force alternative |
+| pixiewps | Ready | Pixie Dust attack |
+| p0f | Ready | Passive OS fingerprinting |
+| nbtscan | Ready | NetBIOS scanner |
 
 ### Installing via Infusion Manager
 
-1. Go to **Infusion Manager** in the web UI
-2. Find the **Dependencies** category (orange)
-3. Click **Install** next to any tool
+1. Go to **Infusion Manager** → **Dependencies** category (orange)
+2. Click **Install** next to any tool
 
-The installer will:
-- Extract the package to `/sd/<name>/`
-- Copy binaries to `/sd/usr/sbin/`
-- Copy VERSION file for version tracking
-- Auto-install dependencies when you install infusions (e.g., installing WPS auto-installs reaver, bully, pixiewps)
-
-### Auto-Dependencies
-
-When you install these infusions, dependencies are auto-installed:
+Auto-installed dependencies:
 
 | Infusion | Auto-installs |
 |----------|---------------|
@@ -212,65 +192,64 @@ When you install these infusions, dependencies are auto-installed:
 | wps | reaver, bully, pixiewps |
 | strip-n-inject | sslstrip |
 
+---
+
 ## OPKG Usage
 
 ```bash
 ssh root@172.16.42.1
 opkg update
-opkg install <package> --dest sd  # Installs to SD
+opkg install <package> --dest sd  # Installs to SD card
 ```
 
-**Note:** The Chaos Calmer repo in opkg.conf requires internet access.
+---
 
 ## Default Access
 
 - **HTTP:** http://172.16.42.1
 - **HTTPS:** https://172.16.42.1:1471 (self-signed cert)
-- **SSH:** ssh root@172.16.42.1
+- **SSH:** `sshpass -p "root" ssh root@172.16.42.1`
 
 ## SSL Certificate
 
-The Pineapple uses a self-signed SSL certificate. To avoid browser warnings:
+To avoid browser warnings:
 
-1. **Download cert:** Visit `http://172.16.42.1/ssl-cert.php` and save as `pineapple.crt`
+1. **Download cert:** Visit `http://172.16.42.1/ssl-cert.php` → save as `pineapple.crt`
 2. **Import to OS:**
-   - **Windows:** Double-click cert → Install → Trusted Root CA
+   - **Windows:** Double-click → Install → Trusted Root CA
    - **macOS:** Keychain Access → File → Import → Set to "Always Trust"
-   - **Linux:** Copy to `/usr/local/share/ca-certificates/` and run `update-ca-certificates`
-   - **Firefox:** Settings → Privacy → View Certificates → Import (manual per-browser)
+   - **Linux:** Copy to `/usr/local/share/ca-certificates/` → run `update-ca-certificates`
 
-Or use the auto-install script:
+Or auto-install:
 ```bash
 curl -O https://raw.githubusercontent.com/Underworldbros/pineapple-mark-v/main/scripts/install-cert.sh
-chmod +x install-cert.sh
-./install-cert.sh
+chmod +x install-cert.sh && ./install-cert.sh
 ```
+
+---
 
 ## Known Issues & Troubleshooting
 
-### WiFi Connection Issues After Device Standby - ✅ FIXED
+### High Memory Usage (~90%)
+Normal for this hardware. The Pineapple Mark V has only 64MB RAM. With nginx, hostapd, wpa_supplicant, netifd, and PHP workers the baseline is ~50MB. Swap is configured on the SD card to handle overflow.
 
-**Issue:** Phones connecting to the rogue AP (wlan0) fail to reconnect after standby/sleep, especially with MAC randomization enabled.
+Mitigations applied:
+- PHP workers reduced from 3 to 1 (`/etc/init.d/php5-fastcgi`)
+- Tile auto-refresh reduced from 5s to 30s
+- OUI lookup uses `grep` instead of loading file into PHP memory
 
-**Root Cause:** The hostapd configuration was set to `disassoc_low_ack=1` on wlan0, which automatically disconnects clients when frame ACK rates drop. This was too aggressive for devices that:
-- Use MAC randomization (phones with privacy features)
-- Have intermittent connectivity after waking from standby
-- Reconnect with a different MAC address
+### WiFi Reconnection After Standby - FIXED
 
-**Fix Applied:** The `disassoc_low_ack` setting has been disabled on wlan0 (set to 0) in `/etc/config/wireless`. This change:
-- ✅ Allows phones with MAC randomization to reconnect after standby
-- ✅ Persists across reboots (set in UCI wireless config)
-- ✅ Keeps `disassoc_low_ack=1` on the legitimate AP (wlan0-1) to prevent spam clients
+**Issue:** Devices with MAC randomization fail to reconnect to rogue AP after standby.
 
-**Implementation:**
-- Modified `/etc/config/wireless` to add `option disassoc_low_ack 0` to the Pineapple5_167C interface
-- Restarted network services to apply changes
-- Config is now part of the backup in `internal-flash/etc/config/wireless`
+**Fix:** `disassoc_low_ack 0` set on wlan0 in `/etc/config/wireless`. Persists across reboots.
+
+---
 
 ## Notes
 
-- Root filesystem is only 3.1MB - always install packages to SD
-- Default credentials: root/root
-- Network: 172.16.42.1/24
-- Binaries on SD need `/sd/usr/lib` in LD_LIBRARY_PATH (set in rc.local)
-- VERSION files track package versions for update detection
+- Root filesystem is only 3.1MB - always install packages to SD (`--dest sd`)
+- Default credentials: `root` / `root`
+- Network: `172.16.42.1/24`
+- Binaries on SD need `/sd/usr/lib` in `LD_LIBRARY_PATH` (set in `rc.local`)
+- Static lease encryption key is derived from root password hash - changing the root password will break existing static leases (clear and re-add them)
