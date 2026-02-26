@@ -1,0 +1,45 @@
+
+config wifi-device 'radio0'
+	option type 'mac80211'
+	option channel '11'
+	option hwmode '11ng'
+	option macaddr '00:13:37:a5:16:7c'
+	option htmode 'HT20'
+	list ht_capab 'SHORT-GI-20'
+	list ht_capab 'SHORT-GI-40'
+	list ht_capab 'RX-STBC1'
+	list ht_capab 'DSSS_CCK-40'
+
+config wifi-iface
+	option device 'radio0'
+	option mode 'ap'
+	option ssid 'Pineapple5_167C'
+	option disassoc_low_ack 0
+	option encryption 'none'
+	option hidden '0'
+	option network 'rogue'
+
+config wifi-iface
+	option device 'radio0'
+	option network 'lan'
+	option mode 'ap'
+	option encryption 'psk2+ccmp'
+	option ssid 'Free WiFi'
+	option key 'HAckthis66!!'
+	option disabled '0'
+
+config wifi-device 'radio1'
+	option type 'mac80211'
+	option hwmode '11g'
+	option macaddr '00:13:37:89:d8:9d'
+	option channel '1'
+
+config wifi-iface
+	option device 'radio1'
+	option mode 'sta'
+	option hidden '0'
+	option network 'wan'
+	option ssid 'Home2'
+	option key 'HAckthis66!!@@'
+	option encryption 'psk2+ccmp'
+
