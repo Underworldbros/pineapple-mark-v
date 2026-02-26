@@ -1,10 +1,25 @@
 <?php
-// Auth validation
-include_once('/pineapple/includes/api/auth.php');
+// Start session for authentication/CSRF
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check if user is logged in
+if (!isset($_SESSION['logged_in'])) {
+    // Return JSON error instead of redirecting
+    header('Content-Type: application/json');
+    echo json_encode(array('error' => 'Not logged in'));
+    exit();
+}
 
 // CSRF validation only for POST requests (write operations)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    include_once('/pineapple/includes/api/csrf_check.php');
+    if (!isset($_POST['_csrfToken']) || $_POST['_csrfToken'] != $_SESSION['_csrfToken']) {
+        header('Content-Type: application/json');
+        echo json_encode(array('error' => 'Invalid CSRF token'));
+        exit();
+    }
+    unset($_POST['_csrfToken']);
 }
 
 // ============================================================================
