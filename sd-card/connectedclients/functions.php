@@ -252,6 +252,8 @@ function get_leases_without_vendors(){
     }
     
     // Get ARP table for online status (read file directly - faster than exec)
+    // Only count RESOLVED ARP entries (0x2 flags = REACHABLE/STALE)
+    // Ignore incomplete entries (0x0 flags) - they're not real connections
     $arp_table = array();
     $arp_content = file_get_contents('/proc/net/arp');
     if ($arp_content) {
@@ -261,9 +263,13 @@ function get_leases_without_vendors(){
             if (empty($line) || strpos($line, 'IP address') === 0) continue;
             $parts = preg_split('/\s+/', $line);
             if (count($parts) >= 4) {
-                $mac_lower = strtolower($parts[3]);
-                $ip = $parts[0];
-                $arp_table[$mac_lower] = $ip;  // MAC => IP
+                // Check if ARP entry is valid (flags must have 0x2 = REACHABLE/STALE)
+                $flags = $parts[2];
+                if (strpos($flags, '0x2') !== false) {
+                    $mac_lower = strtolower($parts[3]);
+                    $ip = $parts[0];
+                    $arp_table[$mac_lower] = $ip;  // MAC => IP
+                }
             }
         }
     }
