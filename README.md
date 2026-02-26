@@ -215,27 +215,24 @@ chmod +x install-cert.sh
 
 ## Known Issues & Troubleshooting
 
-### WiFi Connection Issues After Device Standby
+### WiFi Connection Issues After Device Standby - ✅ FIXED
 
 **Issue:** Phones connecting to the rogue AP (wlan0) fail to reconnect after standby/sleep, especially with MAC randomization enabled.
 
-**Root Cause:** The hostapd configuration includes `disassoc_low_ack=1` on wlan0, which automatically disconnects clients when frame ACK rates drop. This is too aggressive for devices that:
+**Root Cause:** The hostapd configuration was set to `disassoc_low_ack=1` on wlan0, which automatically disconnects clients when frame ACK rates drop. This was too aggressive for devices that:
 - Use MAC randomization (phones with privacy features)
 - Have intermittent connectivity after waking from standby
 - Reconnect with a different MAC address
 
-**Solution:** Modify `/var/run/hostapd-phy0.conf`:
-```bash
-# Change disassoc_low_ack from 1 to 0 on wlan0 (rogue AP)
-sed -i '0,/disassoc_low_ack=1/{/^interface=wlan0$/,/^$/s/disassoc_low_ack=1/disassoc_low_ack=0/}' /var/run/hostapd-phy0.conf
+**Fix Applied:** The `disassoc_low_ack` setting has been disabled on wlan0 (set to 0) in `/etc/config/wireless`. This change:
+- ✅ Allows phones with MAC randomization to reconnect after standby
+- ✅ Persists across reboots (set in UCI wireless config)
+- ✅ Keeps `disassoc_low_ack=1` on the legitimate AP (wlan0-1) to prevent spam clients
 
-# Restart hostapd
-killall hostapd
-sleep 2
-hostapd -P /var/run/wifi-phy0.pid -B /var/run/hostapd-phy0.conf
-```
-
-**Note:** Keep `disassoc_low_ack=1` on the legitimate AP (wlan0-1) to prevent spam clients.
+**Implementation:**
+- Modified `/etc/config/wireless` to add `option disassoc_low_ack 0` to the Pineapple5_167C interface
+- Restarted network services to apply changes
+- Config is now part of the backup in `internal-flash/etc/config/wireless`
 
 ## Notes
 
