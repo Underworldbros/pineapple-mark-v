@@ -1,20 +1,17 @@
 <?php
-// Start session for authentication/CSRF
+date_default_timezone_set('UTC');
+
+// Start session and check auth
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-
-// Check if user is logged in
 if (!isset($_SESSION['logged_in'])) {
-    // Return JSON error instead of redirecting
     header('Content-Type: application/json');
     echo json_encode(array('error' => 'Not logged in'));
     exit();
 }
-
-// CSRF validation only for POST requests (write operations)
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['_csrfToken']) || $_POST['_csrfToken'] != $_SESSION['_csrfToken']) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_csrfToken'])) {
+    if ($_POST['_csrfToken'] != $_SESSION['_csrfToken']) {
         header('Content-Type: application/json');
         echo json_encode(array('error' => 'Invalid CSRF token'));
         exit();
@@ -38,7 +35,8 @@ function is_valid_mac($mac) {
  * Validate IPv4 address
  */
 function is_valid_ipv4($ip) {
-    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
+    return preg_match('/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/', $ip, $m)
+        && $m[1] <= 255 && $m[2] <= 255 && $m[3] <= 255 && $m[4] <= 255;
 }
 
 /**
@@ -1675,50 +1673,35 @@ function get_static_leases(){
 
 // Add a static DHCP lease
 function add_static_lease($mac, $ip, $hostname){
-    // Validate MAC address
     if (!is_valid_mac($mac)) {
         return json_encode(array('error' => 'Invalid MAC address format'));
     }
-    
-    // Validate IP address
     if (!is_valid_ipv4($ip)) {
         return json_encode(array('error' => 'Invalid IPv4 address'));
     }
-    
-    // Validate and sanitize hostname if provided
     if ($hostname) {
         if (!is_valid_hostname($hostname)) {
             return json_encode(array('error' => 'Invalid hostname format'));
         }
         $hostname = sanitize_hostname($hostname);
     }
-    
-    // Check if static entry already exists for this MAC
+
     $static_file = '/etc/dnsmasq.d/static_dhcp';
     if (file_exists($static_file)) {
         $lines = file($static_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
-            if (preg_match('/dhcp-host=' . preg_quote($mac) . ',/', $line)) {
+            if (strpos($line, 'dhcp-host=' . $mac . ',') === 0) {
                 return json_encode(array('error' => 'Static lease already exists for this MAC'));
             }
         }
     }
-    
-    // Create entry
-    $entry = "dhcp-host=" . $mac . "," . $ip;
-    if ($hostname) {
-        $entry .= "," . $hostname;
-    }
-    $entry .= "\n";
-    
-    // Write to file
+
+    $entry = "dhcp-host=" . $mac . "," . $ip . ($hostname ? "," . $hostname : "") . "\n";
     if (!file_put_contents($static_file, $entry, FILE_APPEND)) {
         return json_encode(array('error' => 'Failed to write static lease'));
     }
-    
-    // Reload dnsmasq
-    exec("killall -HUP dnsmasq 2>/dev/null", $output, $return_code);
-    
+
+    exec("killall -HUP dnsmasq 2>/dev/null");
     return json_encode(array('status' => 'added', 'mac' => $mac, 'ip' => $ip));
 }
 

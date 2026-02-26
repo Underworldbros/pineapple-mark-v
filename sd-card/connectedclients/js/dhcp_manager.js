@@ -443,9 +443,12 @@ function dhcp_add_static() {
         return;
     }
     
-    $.post('/components/infusions/connectedclients/functions.php?action=add_static_lease',
-        { mac: mac, ip: ip, hostname: hostname, _csrfToken: $('meta[name=_csrfToken]').attr('content') },
-        function(data) {
+    // Use Pineapple's replace_AJAX to handle CSRF properly
+    $.ajax({
+        type: 'POST',
+        url: '/components/infusions/connectedclients/functions.php?action=add_static_lease',
+        data: { mac: mac, ip: ip, hostname: hostname },
+        success: function(data) {
             try {
                 var response = JSON.parse(data);
                 if (response.error) {
@@ -458,16 +461,21 @@ function dhcp_add_static() {
                     dhcp_load_static();
                 }
             } catch(e) {
-                alert('Error: Invalid response');
+                alert('Error: Invalid response - ' + data);
             }
+        },
+        error: function(xhr, status, error) {
+            alert('Request failed: ' + error + ' (Status: ' + xhr.status + ')');
         }
-    );
+    });
 }
 
 function dhcp_delete_static(mac) {
-    $.post('/components/infusions/connectedclients/functions.php?action=delete_static_lease',
-        { mac: mac, _csrfToken: $('meta[name=_csrfToken]').attr('content') },
-        function(data) {
+    $.ajax({
+        type: 'POST',
+        url: '/components/infusions/connectedclients/functions.php?action=delete_static_lease',
+        data: { mac: mac },
+        success: function(data) {
             try {
                 var response = JSON.parse(data);
                 if (response.error) {
@@ -478,8 +486,11 @@ function dhcp_delete_static(mac) {
             } catch(e) {
                 alert('Error: Invalid response');
             }
+        },
+        error: function(xhr, status, error) {
+            alert('Request failed: ' + error + ' (Status: ' + xhr.status + ')');
         }
-    );
+    });
 }
 
 function dhcp_load_ranges() {
