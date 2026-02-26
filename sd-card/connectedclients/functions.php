@@ -1331,9 +1331,11 @@ function renew_lease($mac){
                 $new_lines[] = $line;
             }
         }
-        
+         
         if ($found) {
             file_put_contents($leases_file, implode("\n", $new_lines) . "\n");
+            // Log the renewal to our tracking file
+            log_lease_renewal($mac, $lease_duration);
             // Restart dnsmasq to reload
             exec("killall -HUP dnsmasq 2>/dev/null");
         }
@@ -1824,20 +1826,73 @@ function get_lease_mtime($mac) {
     ) : null;
 }
 
-// Count DHCP renewals for a MAC from log
-function count_dhcp_renewals($mac) {
-    $count = 0;
-    $log_file = '/var/log/dnsmasq.log';
-    
-    if (!file_exists($log_file)) {
-        return $count;
+// Log a lease renewal to our tracking file
+function log_lease_renewal($mac, $duration) {
+    $renewal_log = '/tmp/connectedclients_renewals.log';
+    $entry = time() . ' ' . strtolower($mac) . ' ' . $duration . ' manual' . "\n";
+    file_put_contents($renewal_log, $entry, FILE_APPEND);
+}
+
+// Log an automatic renewal (half-time renewal)
+function log_auto_renewal($mac, $duration) {
+    $renewal_log = '/tmp/connectedclients_renewals.log';
+    $entry = time() . ' ' . strtolower($mac) . ' ' . $duration . ' auto' . "\n";
+    file_put_contents($renewal_log, $entry, FILE_APPEND);
+}
+
+// Enable dnsmasq logging if not already enabled
+function ensure_dnsmasq_logging() {
+    $config_file = '/var/etc/dnsmasq.conf';
+    if (!file_exists($config_file)) {
+        return;
     }
     
-    $mac_lower = strtolower($mac);
-    $output = array();
-    exec('grep -i "DHCPACK" ' . escapeshellarg($log_file) . ' 2>/dev/null | grep -i ' . escapeshellarg($mac_lower) . ' | wc -l', $output);
+    $config = file_get_contents($config_file);
+    // Check if log-queries is already there
+    if (strpos($config, 'log-queries') === false) {
+        $config .= "\nlog-queries\n";
+        file_put_contents($config_file, $config);
+        // Restart dnsmasq to apply
+        exec("killall -HUP dnsmasq 2>/dev/null");
+    }
+}
+
+// Count DHCP renewals for a MAC (both manual and automatic from dnsmasq log)
+function count_dhcp_renewals($mac) {
+    $count = 0;
+    $renewal_log = '/tmp/connectedclients_renewals.log';
+    $log_file = '/var/log/dnsmasq.log';
     
-    return isset($output[0]) ? (int)$output[0] : 0;
+    // First, ensure dnsmasq logging is enabled
+    ensure_dnsmasq_logging();
+    
+    $mac_lower = strtolower($mac);
+    
+    // Count manual renewals from our tracking file
+    if (file_exists($renewal_log)) {
+        $lines = file($renewal_log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $parts = explode(' ', $line);
+            if (count($parts) >= 2 && strtolower($parts[1]) === $mac_lower) {
+                $count++;
+            }
+        }
+    }
+    
+    // Count from dnsmasq log (DHCPREQUEST = renewal, DHCPACK = lease granted)
+    // Count all DHCP transactions for this MAC (initial + all renewals)
+    if (file_exists($log_file)) {
+        $output = array();
+        exec('grep -i "' . escapeshellarg($mac_lower) . '" ' . escapeshellarg($log_file) . ' 2>/dev/null | grep -i "DHCP" | wc -l', $output);
+        $total_transactions = isset($output[0]) ? (int)$output[0] : 0;
+        
+        // If we have transactions in the log, add those not already counted
+        if ($total_transactions > 0) {
+            $count = max($count, $total_transactions - 1);  // -1 for initial allocation
+        }
+    }
+    
+    return $count;
 }
 
 // Get first seen timestamp (earliest occurrence in log or lease file)
