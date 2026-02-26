@@ -13,7 +13,6 @@
 <ul>
 <li><b>Home</b> (192.168.0.1/24) - Mimics a typical home router subnet. Modern devices recognise this as a trusted home network.</li>
 <li><b>Business</b> (10.0.0.1/24) - Mimics a corporate/business network subnet.</li>
-<li><b>Default</b> (172.16.42.1/24) - Factory configuration. wlan0 rejoins br-lan alongside eth0 and wlan0-1.</li>
 </ul>
 <p>Subnet changes persist across reboots.</p>
 
@@ -32,14 +31,19 @@
 <p><b>Features:</b></p>
 <ul>
 <li>Added configurable Renew Duration dropdown selector in DHCP Manager tab (8 duration options: 30 min to 7 days)</li>
+<li>Added configurable Initial Lease Duration dropdown (30 min to 7 days, default 12 hours)</li>
+<li>All leases now visible in UI - shows online/offline status with ARP flags verification</li>
 <li>Removed Force Refresh button - Release button handles all lease management needs</li>
 </ul>
 <p><b>Bug Fixes:</b></p>
 <ul>
-<li>Fixed stale DHCP lease filtering using ARP table detection - prevents duplicate device listings</li>
+<li>Fixed Release Lease to fully restart dnsmasq (clears memory cache, prevents ghost leases)</li>
+<li>Fixed online/offline status - now correctly checks ARP flags (0x2 = online, 0x0 = offline)</li>
+<li>Fixed duplicate WiFi leases on br-lan - devices on wlan0-1 no longer show on br-lan</li>
+<li>Fixed stale DHCP lease filtering using ARP table detection with valid flags only</li>
 <li>Fixed hostname display in all client listing tabs by properly trimming whitespace</li>
-<li>Improved online/offline device detection accuracy using ARP presence check instead of iw station dump</li>
-<li>Fixed CSV export form ID attribute for proper export functionality</li>
+<li>Improved Cleanup Offline button to fully restart dnsmasq and remove ghost leases</li>
+<li>Fixed rogue AP (wlan0) to accept reconnections with MAC randomization enabled</li>
 </ul>
 
 <h3>v1.4</h3>

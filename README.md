@@ -83,11 +83,18 @@ The **DHCP Manager** infusion provides comprehensive management of DHCP leases, 
 
 ### What's New in v1.5
 
-- **Configurable Renew Duration** - Select lease renewal duration from dropdown (30 minutes, 1 hour, 2 hours, 4 hours, 8 hours, 12 hours, 24 hours, or 7 days)
-- **Configurable Initial Lease Duration** - Adjust DHCP lease timeout in tab header (30 minutes to 7 days, default 12 hours)
-- **Smart Stale Lease Cleanup** - Automatic removal of expired leases with 5-minute grace period (prevents issues with devices waking from standby)
-- **Automatic Device Detection** - Devices appearing on multiple networks now correctly show only on their actual connected interface
-- **Improved Online Status** - Uses ARP table and lease expiry tracking for accurate device connectivity detection
+**Features:**
+- **Configurable Renew Duration** - Select lease renewal duration from dropdown (30 min to 7 days)
+- **Configurable Initial Lease Duration** - Adjust DHCP lease timeout in tab header (30 min to 7 days, default 12h)
+- **Full Lease Visibility** - All leases shown with online/offline status (no auto-hiding)
+- **Manual Cleanup Button** - "Cleanup Offline" button fully restarts dnsmasq to remove stale leases
+
+**Bug Fixes:**
+- **Fixed Rogue AP reconnection** - Disabled aggressive `disassoc_low_ack` on wlan0 to allow MAC randomization
+- **Fixed lease release** - Now fully restarts dnsmasq instead of reload-only (prevents ghost leases)
+- **Fixed online/offline detection** - Checks ARP flags (0x2 = online, 0x0 = offline)
+- **Fixed duplicate WiFi leases** - Devices on wlan0-1 no longer duplicate on br-lan
+- **Fixed stale lease cleanup** - Only removes truly offline devices from leases file
 
 ### Quick Start
 

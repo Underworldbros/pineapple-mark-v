@@ -282,6 +282,29 @@ function get_leases_without_vendors(){
     // Get DHCP option data (device class, etc.)
     $dhcp_options = get_dhcp_client_info();
     
+    // First pass: collect MACs that are on WiFi (wlan0 or wlan0-1)
+    $wifi_macs = array();
+    if (file_exists($leases_file)) {
+        $lines = file($leases_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $parts = explode(' ', $line);
+            if (count($parts) >= 3) {
+                $ip = trim($parts[2]);
+                $mac = trim($parts[1]);
+                // Check if on wlan0 or wlan0-1 IP ranges
+                if (strpos($ip, '192.168.0') === 0 || strpos($ip, '10.0.0') === 0) {
+                    // On rogue AP
+                    $wifi_macs[strtolower($mac)] = 'wlan0';
+                } elseif (strpos($ip, '172.16.42') === 0) {
+                    // Might be on wlan0-1, check it
+                    if (check_mac_on_wlan0_1($mac)) {
+                        $wifi_macs[strtolower($mac)] = 'wlan0-1';
+                    }
+                }
+            }
+        }
+    }
+    
     if (file_exists($leases_file)) {
         $lines = file($leases_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
@@ -290,7 +313,15 @@ function get_leases_without_vendors(){
                  $expiry_timestamp = (int)$parts[0];
                 $mac = trim($parts[1]);
                 $ip = trim($parts[2]);
+                $mac_lower = strtolower($mac);
                 $hostname = count($parts) >= 4 ? trim($parts[3]) : 'unknown';
+                
+                // Skip br-lan lease if this MAC is on WiFi (show WiFi version instead)
+                // But DON'T skip if it's the PRIMARY wlan0-1 lease (wlan0-1 is bridged to br-lan)
+                if (strpos($ip, '172.16.42') === 0 && isset($wifi_macs[$mac_lower]) && $wifi_macs[$mac_lower] === 'wlan0') {
+                    // This is br-lan IP but MAC is on rogue AP - skip the br-lan duplicate
+                    continue;
+                }
                 
                 // Get lease duration: stored value (5th field) or use default from dnsmasq config
                 $lease_duration = (count($parts) >= 5 && is_numeric($parts[4])) ? (int)$parts[4] : $default_lease_duration;
