@@ -27,8 +27,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_csrfToken'])) {
  * Validate MAC address format (XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX)
  */
 function is_valid_mac($mac) {
-    // Check if MAC address matches standard format
+    // Check if MAC address matches standard format (colon or dash separated)
     return preg_match('/^([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})$/', $mac) === 1;
+}
+
+// Normalize MAC to lowercase colon-separated format
+function normalize_mac($mac) {
+    return strtolower(str_replace('-', ':', $mac));
 }
 
 /**
@@ -1356,6 +1361,7 @@ function static_purge_dynamic_lease($mac) {
 function add_static_lease($mac, $ip, $hostname) {
     if (!is_valid_mac($mac))
         return json_encode(array('error' => 'Invalid MAC address format'));
+    $mac = normalize_mac($mac);
     if (!is_valid_ipv4($ip))
         return json_encode(array('error' => 'Invalid IPv4 address'));
     if ($hostname) {
@@ -1385,6 +1391,7 @@ function add_static_lease($mac, $ip, $hostname) {
 function delete_static_lease($mac) {
     if (!is_valid_mac($mac))
         return json_encode(array('error' => 'Invalid MAC address format'));
+    $mac = normalize_mac($mac);
 
     $leases = static_read_all();
     $new = array();
