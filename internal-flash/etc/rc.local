@@ -1,4 +1,5 @@
 
 /sd/connectedclients/decrypt_leases.sh
 #Add your commands above this
+mkdir -p /sd/logntouch /sd/log/dnsmasq.log
 exit 0

@@ -1411,7 +1411,7 @@ function get_dhcp_ranges(){
 // Get DHCP log
 function get_dhcp_log(){
     $log = array();
-    $log_file = '/var/log/dnsmasq.log';
+    $log_file = '/sd/log/dnsmasq.log';
     
     if (file_exists($log_file)) {
         $lines = file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -1430,7 +1430,7 @@ function get_dhcp_log(){
 
 // Clear DHCP log
 function clear_dhcp_log(){
-    exec("> /var/log/dnsmasq.log");
+    exec("> /sd/log/dnsmasq.log");
     return json_encode(array('status' => 'cleared'));
 }
 
