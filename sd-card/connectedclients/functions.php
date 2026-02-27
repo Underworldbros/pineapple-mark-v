@@ -1463,7 +1463,7 @@ function export_leases_csv(){
 // Get last DHCP action for each MAC from dnsmasq log
 function get_dhcp_actions_from_log() {
     $actions = array();
-    $log_file = '/var/log/dnsmasq.log';
+    $log_file = '/sd/log/dnsmasq.log';
     
     if (!file_exists($log_file)) {
         return $actions;
@@ -1474,8 +1474,9 @@ function get_dhcp_actions_from_log() {
     exec('tail -500 ' . escapeshellarg($log_file) . ' 2>/dev/null', $output);
     
     foreach ($output as $line) {
-        // Parse DHCP lines like: "dnsmasq-dhcp[1234]: DHCPACK(br-lan) 192.168.1.100 04:92:26:1d:0c:37"
-        if (preg_match('/DHCP(ACK|OFFER|RELEASE|RENEW|DECLINE).*\s([0-9a-f:]+)$/i', $line, $matches)) {
+        // Parse DHCP lines: "dnsmasq-dhcp[1234]: DHCPACK(br-lan) 192.168.1.100 04:92:26:1d:0c:37 Hello"
+        // or: "DHCPREQUEST(br-lan) 172.16.42.125 04:92:26:1d:0c:37"
+        if (preg_match('/DHCP(ACK|REQUEST|OFFER|RELEASE|RENEW|DECLINE).*?([0-9a-f:]{17})/i', $line, $matches)) {
             $mac_lower = strtolower($matches[2]);
             $action = strtoupper($matches[1]);
             $timestamp = extract_log_timestamp($line);
@@ -1495,7 +1496,7 @@ function get_dhcp_actions_from_log() {
 // Get recent DNS query for each MAC from dnsmasq log
 function get_recent_dns_queries() {
     $queries = array();
-    $log_file = '/var/log/dnsmasq.log';
+    $log_file = '/sd/log/dnsmasq.log';
     
     if (!file_exists($log_file)) {
         return $queries;
@@ -1526,7 +1527,7 @@ function get_recent_dns_queries() {
 // Get DHCP client info (device class, hostname) from dnsmasq log
 function get_dhcp_client_info() {
     $info = array();
-    $log_file = '/var/log/dnsmasq.log';
+    $log_file = '/sd/log/dnsmasq.log';
     
     if (!file_exists($log_file)) {
         return $info;
@@ -1536,33 +1537,75 @@ function get_dhcp_client_info() {
     $output = array();
     exec('tail -500 ' . escapeshellarg($log_file) . ' 2>/dev/null', $output);
     
+    // Track current transaction ID and associated data
+    $tx_vendors = array();  // transaction ID -> vendor class
+    $tx_hostnames = array(); // transaction ID -> hostname
+    $tx_macs = array(); // transaction ID -> MAC
+    
     foreach ($output as $line) {
-        // Parse DHCP with client info like: "dnsmasq-dhcp[1234]: DHCPACK(br-lan) 192.168.1.100 04:92:26:1d:0c:37 iphone"
-        if (preg_match('/DHCP(ACK|OFFER).*\s([0-9a-f:]+)\s+(\S+)$/i', $line, $matches)) {
-            $mac_lower = strtolower($matches[2]);
-            $client_info = $matches[3];
+        // Extract transaction ID (the number like 3051707351)
+        if (preg_match('/(\d+)\s+(client provides name|vendor class|DHCPREQUEST|DHCPACK)/', $line, $tx_match)) {
+            $tx_id = $tx_match[1];
             
-            if ($mac_lower && $client_info && $client_info !== '*') {
-                $info[$mac_lower]['hostname'] = $client_info;
+            // vendor class: "vendor class: MSFT 5.0"
+            if (preg_match('/vendor class:\s*(\S+)/i', $line, $v_match)) {
+                $tx_vendors[$tx_id] = $v_match[1];
+            }
+            
+            // client provides name: "client provides name: Bael"
+            if (preg_match('/client provides name:\s*(\S+)/i', $line, $h_match)) {
+                $tx_hostnames[$tx_id] = $h_match[1];
+            }
+            
+            // DHCPREQUEST/DHCPACK: has MAC "DHCPREQUEST(br-lan) 172.16.42.125 04:92:26:1d:0c:37"
+            if (preg_match('/(DHCPREQUEST|DHCPACK).*\s([0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2})/i', $line, $mac_match)) {
+                $mac_lower = strtolower($mac_match[2]);
                 
-                // Try to detect device class from hostname/info
-                $info_lower = strtolower($client_info);
-                if (strpos($info_lower, 'iphone') !== false || strpos($info_lower, 'ipad') !== false) {
-                    $info[$mac_lower]['class'] = 'iOS';
-                } elseif (strpos($info_lower, 'android') !== false) {
-                    $info[$mac_lower]['class'] = 'Android';
-                } elseif (strpos($info_lower, 'windows') !== false || strpos($info_lower, 'msft') !== false) {
-                    $info[$mac_lower]['class'] = 'Windows';
-                } elseif (strpos($info_lower, 'mac') !== false || strpos($info_lower, 'darwin') !== false) {
-                    $info[$mac_lower]['class'] = 'macOS';
-                } elseif (strpos($info_lower, 'linux') !== false) {
-                    $info[$mac_lower]['class'] = 'Linux';
+                // Gather all info for this MAC from any transaction
+                if (isset($tx_hostnames[$tx_id])) {
+                    $info[$mac_lower]['hostname'] = $tx_hostnames[$tx_id];
                 }
+                if (isset($tx_vendors[$tx_id])) {
+                    $info[$mac_lower]['class'] = parse_vendor_class($tx_vendors[$tx_id]);
+                }
+                
+                // Also check for hostname in DHCPACK line itself "DHCPACK... Hello"
+                if (!isset($info[$mac_lower]['hostname'])) {
+                    if (preg_match('/DHCPACK.*\s([0-9a-f:]+)\s+(\S+)$/i', $line, $ack_match)) {
+                        $hostname = $ack_match[2];
+                        if ($hostname && $hostname !== '*') {
+                            $info[$mac_lower]['hostname'] = $hostname;
+                        }
+                    }
+                }
+                
+                $tx_macs[$tx_id] = $mac_lower;
             }
         }
     }
     
     return $info;
+}
+
+// Parse vendor class string to readable device class
+function parse_vendor_class($vendor) {
+    $vendor_lower = strtolower($vendor);
+    
+    if (strpos($vendor_lower, 'msft') !== false || strpos($vendor_lower, 'microsoft') !== false) {
+        return 'Windows';
+    } elseif (strpos($vendor_lower, 'apple') !== false) {
+        return 'Apple';
+    } elseif (strpos($vendor_lower, 'android') !== false) {
+        return 'Android';
+    } elseif (strpos($vendor_lower, 'linux') !== false) {
+        return 'Linux';
+    } elseif (strpos($vendor_lower, 'dhcpcd') !== false) {
+        return 'Linux (dhcpcd)';
+    } elseif (strpos($vendor_lower, 'prism') !== false) {
+        return 'Wireless Bridge';
+    } else {
+        return $vendor; // Return as-is if unknown
+    }
 }
 
 // Helper: Extract timestamp from dnsmasq log line
@@ -1644,7 +1687,7 @@ function ensure_dnsmasq_logging() {
 function count_dhcp_renewals($mac) {
     $count = 0;
     $renewal_log = '/tmp/connectedclients_renewals.log';
-    $log_file = '/var/log/dnsmasq.log';
+    $log_file = '/sd/log/dnsmasq.log';
     
     // First, ensure dnsmasq logging is enabled
     ensure_dnsmasq_logging();
@@ -1680,7 +1723,7 @@ function count_dhcp_renewals($mac) {
 
 // Get first seen timestamp (earliest occurrence in log or lease file)
 function get_first_seen($mac) {
-    $log_file = '/var/log/dnsmasq.log';
+    $log_file = '/sd/log/dnsmasq.log';
     $leases_file = '/tmp/dhcp.leases';
     
     // Try dnsmasq log first
@@ -1727,7 +1770,7 @@ function get_first_seen($mac) {
 
 // Get last seen timestamp (most recent occurrence in log or current time)
 function get_last_seen($mac) {
-    $log_file = '/var/log/dnsmasq.log';
+    $log_file = '/sd/log/dnsmasq.log';
     $leases_file = '/tmp/dhcp.leases';
     
     // Try dnsmasq log first
