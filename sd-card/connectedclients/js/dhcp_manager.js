@@ -408,7 +408,6 @@ function dhcp_load_static() {
             html += 'Hostname: <input type="text" id="static_hostname" placeholder="mydevice"><br/><br/>';
             html += '<button onclick="dhcp_add_static()">Add</button> ';
             html += '<button onclick="$(\'#add_static_form\').hide()">Cancel</button>';
-            html += '<div id="static_form_status" style="margin-top:8px;font-weight:bold;"></div>';
             html += '</div>';
             
             if (leases.length == 0) {
@@ -445,26 +444,23 @@ function dhcp_add_static() {
     var mac = $('#static_mac').val();
     var ip = $('#static_ip').val();
     var hostname = $('#static_hostname').val().replace(/[^a-zA-Z0-9._-]/g, '');
-
-    function static_form_error(msg) {
-        $('#static_form_status').css('color','#f66').text(msg);
-    }
-
-    $('#static_form_status').text('');
-
+    
     if (!mac || !ip) {
-        static_form_error('MAC and IP are required');
+        alert('MAC and IP are required');
         return;
     }
+    
+    // Basic client-side validation
     if (!is_valid_mac_format(mac)) {
-        static_form_error('Invalid MAC format (use xx:xx:xx:xx:xx:xx)');
+        alert('Invalid MAC address format (use xx:xx:xx:xx:xx:xx)');
         return;
     }
+    
     if (!is_valid_ipv4_format(ip)) {
-        static_form_error('Invalid IP address format');
+        alert('Invalid IP address format');
         return;
     }
-
+    
     $.ajax({
         type: 'POST',
         url: '/components/infusions/connectedclients/functions.php?action=add_static_lease',
@@ -473,7 +469,7 @@ function dhcp_add_static() {
             try {
                 var response = JSON.parse(data);
                 if (response.error) {
-                    static_form_error(response.error);
+                    alert('Error: ' + response.error);
                 } else {
                     $('#add_static_form').hide();
                     $('#static_mac').val('');
@@ -482,11 +478,11 @@ function dhcp_add_static() {
                     dhcp_load_static();
                 }
             } catch(e) {
-                static_form_error('Invalid response: ' + data);
+                alert('Error: Invalid response - ' + data);
             }
         },
         error: function(xhr, status, error) {
-            static_form_error('Request failed: ' + error + ' (' + xhr.status + ')');
+            alert('Request failed: ' + error + ' (Status: ' + xhr.status + ')');
         }
     });
 }

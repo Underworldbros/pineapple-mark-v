@@ -116,6 +116,7 @@ The **DHCP Manager** infusion provides comprehensive management of DHCP leases, 
 - **Fixed duplicate WiFi leases** - Devices on wlan0-1 no longer appear on br-lan
 - **Fixed IP validation** - Replaced `filter_var()` (unavailable on this PHP build) with regex
 - **Fixed OUI grep** - Corrected shell escaping that prevented vendor matches
+- **Fixed static lease handling** - Dynamic leases are never deleted; translated to static in UI only
 
 **Performance:**
 - **OUI lookup** - Single `grep` call instead of PHP line-by-line file scan (no memory spike)
@@ -141,6 +142,16 @@ scp master_oui.txt root@172.16.42.1:/sd/connectedclients/oui_cache.txt
 ### Static DHCP Leases
 
 Assign fixed IPs to specific devices. Leases survive reboots via encrypted SD card storage.
+
+**Lease Behavior:**
+- Dynamic leases come from `/tmp/dhcp.leases` (managed by dnsmasq)
+- Static leases are stored in the module (`/sd/connectedclients/static_leases.dat`) - deleted on module uninstall
+- The UI translates dynamic to static when the same MAC exists in the static list - visually only, the dynamic lease remains in `/tmp/dhcp.leases`
+- Dynamic leases are only removed by:
+  - Natural expiration
+  - Release button in the manager
+  - Cleanup button in the manager
+  - Manual external deletion (SSH, etc.)
 
 **How it works:**
 - PHP encrypts each lease (XOR with MD5 of root password hash) and appends to `/sd/connectedclients/static_leases.dat`
