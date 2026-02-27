@@ -1337,6 +1337,21 @@ function get_static_leases() {
     return json_encode(static_read_all());
 }
 
+// Remove a MAC's entry from /tmp/dhcp.leases so dnsmasq re-assigns on next request
+function static_purge_dynamic_lease($mac) {
+    $leases_file = '/tmp/dhcp.leases';
+    if (!file_exists($leases_file)) return;
+    $mac_lower = strtolower($mac);
+    $lines = file($leases_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $new = array();
+    foreach ($lines as $line) {
+        $parts = explode(' ', $line);
+        if (isset($parts[1]) && strtolower($parts[1]) === $mac_lower) continue;
+        $new[] = $line;
+    }
+    file_put_contents($leases_file, implode("\n", $new) . (count($new) ? "\n" : ""));
+}
+
 // Add a static DHCP lease
 function add_static_lease($mac, $ip, $hostname) {
     if (!is_valid_mac($mac))
@@ -1359,6 +1374,8 @@ function add_static_lease($mac, $ip, $hostname) {
     if (!static_write_all($leases))
         return json_encode(array('error' => 'Failed to write static_leases.dat'));
 
+    // Remove any existing dynamic lease for this MAC so dnsmasq assigns the new static IP immediately
+    static_purge_dynamic_lease($mac);
     exec("killall -HUP dnsmasq 2>/dev/null");
     return json_encode(array('status' => 'added', 'mac' => $mac, 'ip' => $ip));
 }
@@ -1381,6 +1398,7 @@ function delete_static_lease($mac) {
     if (!static_write_all($new))
         return json_encode(array('error' => 'Failed to write static_leases.dat'));
 
+    static_purge_dynamic_lease($mac);
     exec("killall -HUP dnsmasq 2>/dev/null");
     return json_encode(array('status' => 'deleted', 'mac' => $mac));
 }
