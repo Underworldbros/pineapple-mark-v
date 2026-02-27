@@ -58,6 +58,6 @@ function kbyte(kc) {
     # out is now "mac,ip" or "mac,ip,hostname"
     n = split(out, parts, ",")
     if (n >= 2)
-        print "dhcp-host=" parts[1] "," parts[2] (n >= 3 ? "," parts[3] : "")
+        print parts[1] "," parts[2] (n >= 3 ? "," parts[3] : "")
 }
 ' "$LEASE_FILE" >> "$OUT_FILE"

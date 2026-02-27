@@ -1,4 +1,7 @@
+var dhcp_active_tab = 'dashboard';
+
 function dhcp_show_tab(tab) {
+    dhcp_active_tab = tab;
     $('#dhcp_tabs a').css('background','#222').css('color','#ccc');
     $('#tab_' + tab).css('background','#333').css('color','#fff');
     
@@ -74,9 +77,9 @@ function dhcp_load_dashboard() {
             
             html += '</table>';
             
-            $('#dhcp_tab_content').html(html);
+            if (dhcp_active_tab == 'dashboard') $('#dhcp_tab_content').html(html);
         } catch(e) {
-            $('#dhcp_tab_content').html('Error: ' + e);
+            if (dhcp_active_tab == 'dashboard') $('#dhcp_tab_content').html('Error: ' + e);
         }
     });
 }
@@ -374,9 +377,14 @@ function dhcp_export_csv() {
 }
 
 function dhcp_load_static() {
-    $.get('/components/infusions/connectedclients/functions.php?action=get_static_leases', function(data) {
+    $.get('/components/infusions/connectedclients/functions.php?action=get_static_leases&_=' + Date.now(), function(data) {
         try {
             var leases = JSON.parse(data);
+
+            if (!Array.isArray(leases)) {
+                $('#dhcp_tab_content').html('<p style="color:red;">Error loading static leases: ' + (leases.error || data) + '</p>');
+                return;
+            }
             
             var html = '<div style="margin-bottom:10px;">';
             html += '<button onclick="dhcp_show_add_static()">Add Static Lease</button> ';
@@ -425,7 +433,7 @@ function dhcp_show_add_static() {
 function dhcp_add_static() {
     var mac = $('#static_mac').val();
     var ip = $('#static_ip').val();
-    var hostname = $('#static_hostname').val();
+    var hostname = $('#static_hostname').val().replace(/[^a-zA-Z0-9._-]/g, '');
     
     if (!mac || !ip) {
         alert('MAC and IP are required');
@@ -443,11 +451,10 @@ function dhcp_add_static() {
         return;
     }
     
-    // Use Pineapple's replace_AJAX to handle CSRF properly
     $.ajax({
         type: 'POST',
         url: '/components/infusions/connectedclients/functions.php?action=add_static_lease',
-        data: { mac: mac, ip: ip, hostname: hostname },
+        data: { mac: mac, ip: ip, hostname: hostname, _csrfToken: $('meta[name=_csrfToken]').attr('content') },
         success: function(data) {
             try {
                 var response = JSON.parse(data);
@@ -474,7 +481,7 @@ function dhcp_delete_static(mac) {
     $.ajax({
         type: 'POST',
         url: '/components/infusions/connectedclients/functions.php?action=delete_static_lease',
-        data: { mac: mac },
+        data: { mac: mac, _csrfToken: $('meta[name=_csrfToken]').attr('content') },
         success: function(data) {
             try {
                 var response = JSON.parse(data);
