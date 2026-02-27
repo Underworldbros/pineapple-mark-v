@@ -1376,7 +1376,8 @@ function add_static_lease($mac, $ip, $hostname) {
 
     // Remove any existing dynamic lease for this MAC so dnsmasq assigns the new static IP immediately
     static_purge_dynamic_lease($mac);
-    exec("killall -HUP dnsmasq 2>/dev/null");
+    exec("/sd/connectedclients/decrypt_leases.sh 2>/dev/null");
+    exec("kill -HUP \$(pidof dnsmasq) 2>/dev/null");
     return json_encode(array('status' => 'added', 'mac' => $mac, 'ip' => $ip));
 }
 
@@ -1399,7 +1400,8 @@ function delete_static_lease($mac) {
         return json_encode(array('error' => 'Failed to write static_leases.dat'));
 
     static_purge_dynamic_lease($mac);
-    exec("killall -HUP dnsmasq 2>/dev/null");
+    exec("/sd/connectedclients/decrypt_leases.sh 2>/dev/null");
+    exec("kill -HUP \$(pidof dnsmasq) 2>/dev/null");
     return json_encode(array('status' => 'deleted', 'mac' => $mac));
 }
 
