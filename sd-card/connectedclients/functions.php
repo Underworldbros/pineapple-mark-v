@@ -27,13 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_csrfToken'])) {
  * Validate MAC address format (XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX)
  */
 function is_valid_mac($mac) {
-    // Check if MAC address matches standard format (colon or dash separated)
+    // Check if MAC address matches standard format
     return preg_match('/^([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})$/', $mac) === 1;
-}
-
-// Normalize MAC to lowercase colon-separated format
-function normalize_mac($mac) {
-    return strtolower(str_replace('-', ':', $mac));
 }
 
 /**
@@ -1342,26 +1337,10 @@ function get_static_leases() {
     return json_encode(static_read_all());
 }
 
-// Remove a MAC's entry from /tmp/dhcp.leases so dnsmasq re-assigns on next request
-function static_purge_dynamic_lease($mac) {
-    $leases_file = '/tmp/dhcp.leases';
-    if (!file_exists($leases_file)) return;
-    $mac_lower = strtolower($mac);
-    $lines = file($leases_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    $new = array();
-    foreach ($lines as $line) {
-        $parts = explode(' ', $line);
-        if (isset($parts[1]) && strtolower($parts[1]) === $mac_lower) continue;
-        $new[] = $line;
-    }
-    file_put_contents($leases_file, implode("\n", $new) . (count($new) ? "\n" : ""));
-}
-
 // Add a static DHCP lease
 function add_static_lease($mac, $ip, $hostname) {
     if (!is_valid_mac($mac))
         return json_encode(array('error' => 'Invalid MAC address format'));
-    $mac = normalize_mac($mac);
     if (!is_valid_ipv4($ip))
         return json_encode(array('error' => 'Invalid IPv4 address'));
     if ($hostname) {
@@ -1380,9 +1359,7 @@ function add_static_lease($mac, $ip, $hostname) {
     if (!static_write_all($leases))
         return json_encode(array('error' => 'Failed to write static_leases.dat'));
 
-    // Regenerate static hosts file for dnsmasq
-    exec("/sd/connectedclients/decrypt_leases.sh 2>/dev/null");
-    exec("kill -HUP \$(pidof dnsmasq) 2>/dev/null");
+    exec("killall -HUP dnsmasq 2>/dev/null");
     return json_encode(array('status' => 'added', 'mac' => $mac, 'ip' => $ip));
 }
 
@@ -1390,7 +1367,6 @@ function add_static_lease($mac, $ip, $hostname) {
 function delete_static_lease($mac) {
     if (!is_valid_mac($mac))
         return json_encode(array('error' => 'Invalid MAC address format'));
-    $mac = normalize_mac($mac);
 
     $leases = static_read_all();
     $new = array();
@@ -1405,9 +1381,7 @@ function delete_static_lease($mac) {
     if (!static_write_all($new))
         return json_encode(array('error' => 'Failed to write static_leases.dat'));
 
-    static_purge_dynamic_lease($mac);
-    exec("/sd/connectedclients/decrypt_leases.sh 2>/dev/null");
-    exec("kill -HUP \$(pidof dnsmasq) 2>/dev/null");
+    exec("killall -HUP dnsmasq 2>/dev/null");
     return json_encode(array('status' => 'deleted', 'mac' => $mac));
 }
 
