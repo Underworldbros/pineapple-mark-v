@@ -1,4 +1,5 @@
 var dhcp_active_tab = 'dashboard';
+var dhcp_static_prefill = null;
 
 function dhcp_show_tab(tab) {
     dhcp_active_tab = tab;
@@ -366,19 +367,11 @@ function dhcp_renew_lease(mac, duration) {
 }
 
 function dhcp_add_to_static(mac, ip, hostname) {
-    // Switch to static tab and populate form
+    // Store pre-fill data for when static tab loads
+    dhcp_static_prefill = { mac: mac, ip: ip, hostname: hostname };
+    
+    // Switch to static tab
     dhcp_show_tab('static');
-    
-    // Pre-fill the form
-    $('#static_mac').val(mac);
-    $('#static_ip').val(ip);
-    $('#static_hostname').val(hostname);
-    
-    // Show the form
-    $('#add_static_form').show();
-    
-    // Scroll to form
-    $('html, body').animate({scrollTop: 0}, 200);
 }
 
 function dhcp_export_csv() {
@@ -430,6 +423,16 @@ function dhcp_load_static() {
             }
             
             $('#dhcp_tab_content').html(html);
+            
+            // Check if we need to pre-fill the form (from clicking Static in leases tab)
+            if (dhcp_static_prefill) {
+                $('#static_mac').val(dhcp_static_prefill.mac);
+                $('#static_ip').val(dhcp_static_prefill.ip);
+                $('#static_hostname').val(dhcp_static_prefill.hostname || '');
+                $('#add_static_form').show();
+                $('html, body').animate({scrollTop: 0}, 200);
+                dhcp_static_prefill = null; // Clear after use
+            }
         } catch(e) {
             $('#dhcp_tab_content').html('Error: ' + e);
         }
