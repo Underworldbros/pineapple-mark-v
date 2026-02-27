@@ -33,7 +33,8 @@ function get_leases_detail() {
                         var mac = parts[1];
                         var ip = parts[2];
                         var hostname = parts[3] !== '*' ? parts[3] : '<em>unknown</em>';
-                        
+                        var is_static = parts.length >= 5 && parts[4] === 'static';
+
                         // Determine network type
                         var network = '';
                         var network_color = '';
@@ -50,31 +51,39 @@ function get_leases_detail() {
                             network = 'Internet';
                             network_color = '#f0f';
                         }
-                        
+
                         // Calculate time remaining
-                        var seconds_left = expiry_unix - now;
                         var expires_text = '';
                         var expires_color = '#0f0';
-                        
-                        if (seconds_left <= 0) {
-                            expires_text = 'EXPIRED';
-                            expires_color = '#f00';
-                        } else if (seconds_left < 300) { // Less than 5 minutes
-                            expires_text = Math.floor(seconds_left) + 's';
-                            expires_color = '#f50';
-                        } else if (seconds_left < 3600) { // Less than 1 hour
-                            expires_text = Math.floor(seconds_left / 60) + 'm';
-                            expires_color = '#ff0';
-                        } else if (seconds_left < 86400) { // Less than 1 day
-                            expires_text = Math.floor(seconds_left / 3600) + 'h';
+
+                        if (is_static) {
+                            expires_text = '∞';
+                            expires_color = '#0af';
                         } else {
-                            expires_text = Math.floor(seconds_left / 86400) + 'd';
+                            var seconds_left = expiry_unix - now;
+                            if (seconds_left <= 0) {
+                                expires_text = 'EXPIRED';
+                                expires_color = '#f00';
+                            } else if (seconds_left < 300) {
+                                expires_text = Math.floor(seconds_left) + 's';
+                                expires_color = '#f50';
+                            } else if (seconds_left < 3600) {
+                                expires_text = Math.floor(seconds_left / 60) + 'm';
+                                expires_color = '#ff0';
+                            } else if (seconds_left < 86400) {
+                                expires_text = Math.floor(seconds_left / 3600) + 'h';
+                            } else {
+                                expires_text = Math.floor(seconds_left / 86400) + 'd';
+                            }
                         }
-                        
+
                         var row_bg = (i % 2 === 0) ? '#1a1a1a' : '#0d0d0d';
-                        
+
                         html += '<tr style="background:' + row_bg + '; border-bottom:1px solid #333;">';
-                        html += '<td style="padding:3px; border-right:1px solid #333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80px;">' + hostname + '</td>';
+                        html += '<td style="padding:3px; border-right:1px solid #333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80px;">';
+                        html += hostname;
+                        if (is_static) html += ' <span style="background:#0af;color:#000;font-size:8px;font-weight:bold;padding:1px 3px;border-radius:2px;">S</span>';
+                        html += '</td>';
                         html += '<td style="padding:3px; border-right:1px solid #333; font-family:monospace; font-size:9px;">' + ip + '</td>';
                         html += '<td style="padding:3px; border-right:1px solid #333; font-family:monospace; font-size:8px;">' + mac + '</td>';
                         html += '<td style="padding:3px; border-right:1px solid #333; color:' + expires_color + '; font-weight:bold;">' + expires_text + '</td>';

@@ -149,8 +149,24 @@ if (isset($_GET['action'])) {
 // This function parses the DHCP leases in /tmp/dhcp.leases file
 // it is used to build the clients tab
 function get_dhcp_leases_from_log(){
+    $content = file_get_contents('/tmp/dhcp.leases');
+    if ($content === false) $content = '';
+
+    // Append static leases as fake lease lines with expiry=0 (sentinel for ∞)
+    // Format: "0 mac ip hostname static"
+    $dynamic_macs = array();
+    foreach (explode("\n", $content) as $line) {
+        $parts = explode(' ', trim($line));
+        if (count($parts) >= 2) $dynamic_macs[strtolower($parts[1])] = true;
+    }
+    foreach (static_read_all() as $s) {
+        if (isset($dynamic_macs[strtolower($s['mac'])])) continue;
+        $hostname = $s['hostname'] ?: 'unknown';
+        $content .= "\n0 " . $s['mac'] . ' ' . $s['ip'] . ' ' . $hostname . ' static';
+    }
+
     $logs = array();
-    array_push($logs, htmlspecialchars(file_get_contents('/tmp/dhcp.leases')));
+    array_push($logs, htmlspecialchars(trim($content)));
     $html = json_encode($logs);
     return $html;
 }
@@ -423,6 +439,59 @@ function get_leases_without_vendors(){
         }
     }
     
+    // Merge static leases: add any that don't already have a dynamic entry
+    $dynamic_macs = array();
+    foreach ($leases as $l) $dynamic_macs[strtolower($l['mac'])] = true;
+
+    $static_entries = static_read_all();
+    foreach ($static_entries as $s) {
+        $mac_lower = strtolower($s['mac']);
+        if (isset($dynamic_macs[$mac_lower])) continue; // dynamic entry exists, skip
+
+        $is_online = isset($arp_table[$mac_lower]);
+        $ip = $s['ip'];
+
+        if (strpos($ip, '172.16.42') === 0) {
+            $network_type  = check_mac_on_wlan0_1($s['mac']) ? 'Secured AP (wlan0-1)' : 'Ethernet (br-lan)';
+            $connection_type = check_mac_on_wlan0_1($s['mac']) ? 'WiFi (Secured)' : 'Ethernet';
+        } elseif (strpos($ip, '192.168.0') === 0) {
+            $network_type = 'Rogue AP (Home)';   $connection_type = 'WiFi (Rogue)';
+        } elseif (strpos($ip, '10.0.0') === 0) {
+            $network_type = 'Rogue AP (Business)'; $connection_type = 'WiFi (Rogue)';
+        } else {
+            $network_type = 'Unknown'; $connection_type = 'Unknown';
+        }
+
+        $leases[] = array(
+            'mac'                      => $s['mac'],
+            'ip'                       => $ip,
+            'hostname'                 => $s['hostname'] ?: 'unknown',
+            'vendor'                   => null,
+            'expiry_timestamp'         => 0,
+            'expiry_readable'          => '∞',
+            'time_remaining'           => -1,
+            'time_remaining_readable'  => '∞',
+            'lease_age'                => 0,
+            'lease_age_readable'       => '—',
+            'lease_duration'           => 0,
+            'lease_duration_readable'  => '∞',
+            'network_type'             => $network_type,
+            'connection_type'          => $connection_type,
+            'is_online'                => $is_online,
+            'last_dhcp_action'         => null,
+            'recent_dns'               => null,
+            'device_class'             => null,
+            'client_hostname'          => null,
+            'session_duration'         => 0,
+            'session_duration_readable'=> '—',
+            'lease_mtime'              => null,
+            'renewal_count'            => 0,
+            'first_seen'               => null,
+            'last_seen'                => null,
+            'static'                   => true
+        );
+    }
+
     return json_encode($leases);
 }
 
@@ -843,6 +912,19 @@ function count_clients_in_subnet($subnet_prefix){
         }
     }
     
+    // Also count static leases whose IP is in this subnet and MAC is in ARP (online)
+    $static_entries = static_read_all();
+    foreach ($static_entries as $s) {
+        if (strpos($s['ip'], $subnet_prefix) !== 0) continue;
+        $mac_lower = strtolower($s['mac']);
+        // For br-lan, require ARP presence; for others just count it
+        if ($subnet_prefix === '172.16.42.') {
+            if (isset($online_macs[$mac_lower])) $count++;
+        } else {
+            $count++;
+        }
+    }
+
     return intval($count);
 }
 

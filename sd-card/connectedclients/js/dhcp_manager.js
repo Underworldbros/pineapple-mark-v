@@ -108,9 +108,12 @@ function dhcp_load_leases() {
                     
                     // Time remaining (with color coding)
                     var remaining_color = '#0f0';
-                    if (leases[i].time_remaining < 3600) remaining_color = '#f80';  // < 1 hour = orange
-                    if (leases[i].time_remaining < 600) remaining_color = '#f00';   // < 10 mins = red
+                    if (leases[i].time_remaining >= 0 && leases[i].time_remaining < 3600) remaining_color = '#f80';
+                    if (leases[i].time_remaining >= 0 && leases[i].time_remaining < 600)  remaining_color = '#f00';
+                    if (leases[i].time_remaining < 0) remaining_color = '#0af'; // static = blue ∞
                     
+                    var is_static = leases[i].static === true;
+
                     // Main collapsed row
                     html += '<div style="background:' + row_bg + ';border-bottom:1px solid #444;padding:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="dhcp_toggle_lease(' + i + ')">';
                     
@@ -123,6 +126,7 @@ function dhcp_load_leases() {
                     html += '<div style="font-weight:bold;font-size:13px;">';
                     html += (leases[i].hostname && leases[i].hostname !== 'unknown' ? leases[i].hostname : '<em style="color:#666;">Unknown</em>');
                     html += ' <span style="color:#999;font-size:11px;font-weight:normal;">(' + leases[i].ip + ')</span>';
+                    if (is_static) html += ' <span style="background:#0af;color:#000;font-size:10px;font-weight:bold;padding:1px 5px;border-radius:3px;vertical-align:middle;">STATIC</span>';
                     html += '</div>';
                     html += '</div>';
                     
@@ -134,9 +138,15 @@ function dhcp_load_leases() {
                     
                     // Middle-right: Release/Renew/Add Static buttons
                     html += '<div style="flex:1.1;text-align:center;white-space:nowrap;">';
-                    html += '<a href="#" onclick="event.stopPropagation(); dhcp_release_lease(\'' + leases[i].mac + '\'); return false;" style="color:#f66;text-decoration:none;font-size:11px;margin-right:6px;"><b>Release</b></a>';
-                    html += '<a href="#" onclick="event.stopPropagation(); dhcp_renew_lease(\'' + leases[i].mac + '\', get_selected_renew_duration()); return false;" style="color:#6f6;text-decoration:none;font-size:11px;margin-right:6px;"><b>Renew</b></a>';
-                    html += '<a href="#" onclick="event.stopPropagation(); dhcp_add_to_static(\'' + leases[i].mac + '\', \'' + leases[i].ip + '\', \'' + (leases[i].hostname || '') + '\'); return false;" style="color:#0af;text-decoration:none;font-size:11px;"><b>Static</b></a>';
+                    if (is_static) {
+                        html += '<span style="color:#555;font-size:11px;margin-right:6px;"><b>Release</b></span>';
+                        html += '<span style="color:#555;font-size:11px;margin-right:6px;"><b>Renew</b></span>';
+                        html += '<a href="#" onclick="event.stopPropagation(); dhcp_show_tab(\'static\'); return false;" style="color:#0af;text-decoration:none;font-size:11px;"><b>Manage</b></a>';
+                    } else {
+                        html += '<a href="#" onclick="event.stopPropagation(); dhcp_release_lease(\'' + leases[i].mac + '\'); return false;" style="color:#f66;text-decoration:none;font-size:11px;margin-right:6px;"><b>Release</b></a>';
+                        html += '<a href="#" onclick="event.stopPropagation(); dhcp_renew_lease(\'' + leases[i].mac + '\', get_selected_renew_duration()); return false;" style="color:#6f6;text-decoration:none;font-size:11px;margin-right:6px;"><b>Renew</b></a>';
+                        html += '<a href="#" onclick="event.stopPropagation(); dhcp_add_to_static(\'' + leases[i].mac + '\', \'' + leases[i].ip + '\', \'' + (leases[i].hostname || '') + '\'); return false;" style="color:#0af;text-decoration:none;font-size:11px;"><b>Static</b></a>';
+                    }
                     html += '</div>';
                     
                     // Right side: Time remaining
