@@ -283,16 +283,6 @@ function auto_cleanup_stale_leases() {
 
 // Get leases WITHOUT vendor lookup (fast load) - includes wireless and ARP data
 function get_leases_without_vendors(){
-    // Check if static_leases.dat exists - if not, module was uninstalled
-    // Clear /tmp/static_dhcp_hosts so dnsmasq issues fresh DHCP leases
-    $static_dat = '/sd/connectedclients/static_leases.dat';
-    if (!file_exists($static_dat) || filesize($static_dat) === 0) {
-        if (file_exists('/tmp/static_dhcp_hosts')) {
-            file_put_contents('/tmp/static_dhcp_hosts', '');
-            exec("kill -HUP \$(pidof dnsmasq) 2>/dev/null");
-        }
-    }
-    
     $leases = array();
     $leases_file = '/tmp/dhcp.leases';
     $current_time = time();
