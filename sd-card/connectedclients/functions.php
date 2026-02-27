@@ -152,18 +152,31 @@ function get_dhcp_leases_from_log(){
     $content = file_get_contents('/tmp/dhcp.leases');
     if ($content === false) $content = '';
 
-    // Append static leases as fake lease lines with expiry=0 (sentinel for ∞)
-    // Format: "0 mac ip hostname static"
+    // Build static MAC set
+    $static_set = array();
+    foreach (static_read_all() as $s) $static_set[strtolower($s['mac'])] = $s;
+
+    // Tag dynamic lines whose MAC has a static entry, append pure-static ones
     $dynamic_macs = array();
+    $tagged_lines = array();
     foreach (explode("\n", $content) as $line) {
-        $parts = explode(' ', trim($line));
-        if (count($parts) >= 2) $dynamic_macs[strtolower($parts[1])] = true;
+        $line = trim($line);
+        if ($line === '') continue;
+        $parts = explode(' ', $line);
+        $mac_lower = isset($parts[1]) ? strtolower($parts[1]) : '';
+        if ($mac_lower && isset($static_set[$mac_lower])) {
+            // Dynamic lease exists but MAC is static — append 'static' flag
+            $line .= ' static';
+            $dynamic_macs[$mac_lower] = true;
+        }
+        $tagged_lines[] = $line;
     }
-    foreach (static_read_all() as $s) {
-        if (isset($dynamic_macs[strtolower($s['mac'])])) continue;
+    foreach ($static_set as $mac_lower => $s) {
+        if (isset($dynamic_macs[$mac_lower])) continue;
         $hostname = $s['hostname'] ?: 'unknown';
-        $content .= "\n0 " . $s['mac'] . ' ' . $s['ip'] . ' ' . $hostname . ' static';
+        $tagged_lines[] = '0 ' . $s['mac'] . ' ' . $s['ip'] . ' ' . $hostname . ' static';
     }
+    $content = implode("\n", $tagged_lines);
 
     $logs = array();
     array_push($logs, htmlspecialchars(trim($content)));
@@ -334,6 +347,10 @@ function get_leases_without_vendors(){
         }
     }
     
+    // Build static MAC lookup so dynamic entries can be flagged as static
+    $static_macs = array();
+    foreach (static_read_all() as $s) $static_macs[strtolower($s['mac'])] = true;
+
     if (file_exists($leases_file)) {
         $lines = file($leases_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
@@ -433,7 +450,8 @@ function get_leases_without_vendors(){
                     'lease_mtime' => $lease_mtime,
                     'renewal_count' => $renewal_count,
                     'first_seen' => $first_seen,
-                    'last_seen' => $last_seen
+                    'last_seen' => $last_seen,
+                    'static' => isset($static_macs[$mac_lower])
                 );
             }
         }
@@ -889,6 +907,7 @@ function count_clients_in_subnet($subnet_prefix){
         }
     }
     
+    $counted_macs = array();
     if (file_exists($leases_file)) {
         $lines = file($leases_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if (is_array($lines) && count($lines) > 0) {
@@ -901,23 +920,24 @@ function count_clients_in_subnet($subnet_prefix){
                         if ($subnet_prefix === '172.16.42.') {
                             if (isset($online_macs[$mac])) {
                                 $count++;
+                                $counted_macs[$mac] = true;
                             }
                         } else {
-                            // For non-br-lan, count all leases (no ARP filtering needed)
                             $count++;
+                            $counted_macs[$mac] = true;
                         }
                     }
                 }
             }
         }
     }
-    
-    // Also count static leases whose IP is in this subnet and MAC is in ARP (online)
+
+    // Also count static leases whose IP is in this subnet, MAC is in ARP, and not already counted
     $static_entries = static_read_all();
     foreach ($static_entries as $s) {
         if (strpos($s['ip'], $subnet_prefix) !== 0) continue;
         $mac_lower = strtolower($s['mac']);
-        // For br-lan, require ARP presence; for others just count it
+        if (isset($counted_macs[$mac_lower])) continue; // already counted via dynamic lease
         if ($subnet_prefix === '172.16.42.') {
             if (isset($online_macs[$mac_lower])) $count++;
         } else {

@@ -33,7 +33,7 @@ function get_leases_detail() {
                         var mac = parts[1];
                         var ip = parts[2];
                         var hostname = parts[3] !== '*' ? parts[3] : '<em>unknown</em>';
-                        var is_static = parts.length >= 5 && parts[4] === 'static';
+                        var is_static = parts.indexOf('static') >= 4;
 
                         // Determine network type
                         var network = '';
@@ -80,11 +80,11 @@ function get_leases_detail() {
                         var row_bg = (i % 2 === 0) ? '#1a1a1a' : '#0d0d0d';
 
                         html += '<tr style="background:' + row_bg + '; border-bottom:1px solid #333;">';
-                        html += '<td style="padding:3px; border-right:1px solid #333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80px;">';
-                        html += hostname;
+                        html += '<td style="padding:3px; border-right:1px solid #333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80px;">' + hostname + '</td>';
+                        html += '<td style="padding:3px; border-right:1px solid #333; font-family:monospace; font-size:9px;">';
+                        html += ip;
                         if (is_static) html += ' <span style="background:#0af;color:#000;font-size:8px;font-weight:bold;padding:1px 3px;border-radius:2px;">S</span>';
                         html += '</td>';
-                        html += '<td style="padding:3px; border-right:1px solid #333; font-family:monospace; font-size:9px;">' + ip + '</td>';
                         html += '<td style="padding:3px; border-right:1px solid #333; font-family:monospace; font-size:8px;">' + mac + '</td>';
                         html += '<td style="padding:3px; border-right:1px solid #333; color:' + expires_color + '; font-weight:bold;">' + expires_text + '</td>';
                         html += '<td style="padding:3px; color:' + network_color + ';"><b>' + network + '</b></td>';
