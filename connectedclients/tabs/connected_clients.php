@@ -1,4 +1,4 @@
-<h2>Connected Clients: <span id="clients_count"></span></h2>
+<h2>Connected Clients: <span id="clients_count"></span> <a href="#" onclick="get_iw_connected_clients();return false;" style="text-decoration:none;color:#0af;margin-left:20px;margin-right:20px;"><b>↻ Refresh</b></a></h2>
 <h2>Ethernet (br-lan): <span id="brlan_clients_count"></span></h2>
 <div id="brlan_clients">Loading br-lan clients ...</div>
 <hr />
