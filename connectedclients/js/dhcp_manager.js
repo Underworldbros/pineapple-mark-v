@@ -1,6 +1,21 @@
 var dhcp_active_tab = 'dashboard';
 var dhcp_static_prefill = null;
 
+// Initialize localStorage values on page load
+function dhcp_init_storage() {
+    // Load saved initial duration if available
+    var saved_initial_duration = localStorage.getItem('dhcp_initial_duration');
+    if (saved_initial_duration) {
+        $('#initial_duration').val(saved_initial_duration);
+    }
+    
+    // Load saved renew duration if available
+    var saved_renew_duration = localStorage.getItem('dhcp_renew_duration');
+    if (saved_renew_duration) {
+        $('#renew_duration').val(saved_renew_duration);
+    }
+}
+
 function dhcp_show_tab(tab) {
     dhcp_active_tab = tab;
     $('#dhcp_tabs a').css('background','#222').css('color','#ccc');
@@ -641,6 +656,9 @@ function on_initial_duration_change() {
     var duration = get_selected_initial_duration();
     console.log('Setting initial lease duration to:', duration);
     
+    // Save to localStorage so it persists across tab changes
+    localStorage.setItem('dhcp_initial_duration', duration);
+    
     $.post('/components/infusions/connectedclients/functions.php?action=set_initial_duration',
         { duration: duration, _csrfToken: $('meta[name=_csrfToken]').attr('content') },
         function(data) {
@@ -666,6 +684,13 @@ function on_initial_duration_change() {
 function get_selected_renew_duration() {
     var duration = $('#renew_duration').val();
     return duration ? parseInt(duration) : 3600; // Default to 1 hour
+}
+
+// Handle renew duration change (save to localStorage)
+function on_renew_duration_change() {
+    var duration = get_selected_renew_duration();
+    // Save to localStorage so it persists across tab changes
+    localStorage.setItem('dhcp_renew_duration', duration);
 }
 
 // Format seconds into human-readable time
