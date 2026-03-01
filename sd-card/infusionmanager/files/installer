@@ -1,0 +1,148 @@
+#!/bin/sh
+
+# Infusion Manager Installer - called via at job
+# Usage: installer <infusion_name>
+
+NAME="$1"
+SD="/sd"
+INFUSIONS_LINK="/pineapple/components/infusions"
+
+# Set library path - create ld.so.conf.d if possible
+mkdir -p /etc/ld.so.conf.d 2>/dev/null
+echo "/sd/usr/lib" > /etc/ld.so.conf.d/sd.conf 2>/dev/null
+
+# Also set in environment
+export LD_LIBRARY_PATH=/sd/usr/lib:/usr/lib:/lib
+
+if [ -z "$NAME" ]; then
+    echo "Error: No infusion name provided"
+    exit 1
+fi
+
+# Dependency map - format: infusion_name:dependency1,dependency2
+# When installing an infusion, dependencies are auto-installed
+DEPENDS="nmap:nmap
+deauth:mdk3,aireplay
+ettercap:ettercap
+sslstrip:sslstrip
+sslsplit:sslsplit
+strip-n-inject:sslstrip
+crafty:hping3
+occupineapple:mdk3,aireplay
+wps:reaver,bully,pixiewps
+p0f:p0f
+nbtscan:nbtscan"
+
+# Auto-install dependencies for this infusion
+install_dep() {
+    dep=$1
+    # Skip if dependency already exists on SD
+    if [ -f "$SD/usr/sbin/$dep" ] || [ -f "$SD/usr/bin/$dep" ] || [ -d "$SD/$dep" ]; then
+        return 0
+    fi
+    # Check if there's a tarball for this dependency
+    dep_tarball=""
+    for f in $SD/$dep-*.tar.gz; do
+        if [ -f "$f" ]; then
+            dep_tarball="$f"
+            break
+        fi
+    done
+    if [ -n "$dep_tarball" ]; then
+        echo "Installing dependency: $dep from $dep_tarball"
+        cd "$SD"
+        tar -xzf "$dep_tarball"
+        # Copy binaries
+        if [ -d "$SD/$dep/usr/sbin" ]; then
+            cp -r "$SD/$dep/usr/sbin/"* "$SD/usr/sbin/"
+        fi
+        if [ -d "$SD/$dep/usr/bin" ]; then
+            cp -r "$SD/$dep/usr/bin/"* "$SD/usr/bin/"
+        fi
+        if [ -d "$SD/$dep/usr/lib" ]; then
+            cp -r "$SD/$dep/usr/lib/"* "$SD/usr/lib/"
+        fi
+    fi
+}
+
+# Install dependencies for this infusion
+deps=$(echo "$DEPENDS" | grep "^$NAME:" | cut -d: -f2)
+if [ -n "$deps" ]; then
+    for dep in $(echo "$deps" | tr ',' ' '); do
+        install_dep "$dep"
+    done
+fi
+
+# Fix libpcap version compatibility
+ln -sf /usr/lib/libpcap.so.1.1 "$SD/usr/lib/libpcap.so.1.3" 2>/dev/null
+
+# Find tarball
+TARBALL=""
+for f in $SD/$NAME-*.tar.gz; do
+    if [ -f "$f" ]; then
+        TARBALL="$f"
+        break
+    fi
+done
+
+if [ -z "$TARBALL" ] || [ ! -f "$TARBALL" ]; then
+    # If no tarball but dependencies installed, still success
+    echo "Dependencies installed for $NAME"
+    exit 0
+fi
+
+# Extract
+cd "$SD"
+tar -xzf "$TARBALL"
+
+# Copy bin/lib files to standard locations (for dependency packages)
+if [ -d "$SD/$NAME/usr/sbin" ]; then
+    for f in "$SD/$NAME/usr/sbin/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/sbin/"
+    done
+fi
+if [ -d "$SD/$NAME/usr/lib" ]; then
+    for f in "$SD/$NAME/usr/lib/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/lib/"
+    done
+fi
+if [ -d "$SD/$NAME/usr/bin" ]; then
+    for f in "$SD/$NAME/usr/bin/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/bin/"
+    done
+fi
+
+# Copy VERSION file to package directory if it exists in the tarball
+if [ -f "$SD/$NAME/VERSION" ]; then
+    cp "$SD/$NAME/VERSION" "$SD/$NAME/VERSION"
+fi
+if [ -d "$SD/$NAME/usr/lib" ]; then
+    for f in "$SD/$NAME/usr/lib/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/lib/"
+    done
+fi
+if [ -d "$SD/$NAME/usr/bin" ]; then
+    for f in "$SD/$NAME/usr/bin/"*; do
+        [ -f "$f" ] && cp "$f" "$SD/usr/bin/"
+    done
+fi
+
+# Copy VERSION file if exists (for version tracking)
+if [ -f "$SD/$NAME/VERSION" ]; then
+    cp "$SD/$NAME/VERSION" "$SD/$NAME/"
+fi
+
+# Fix libpcap version compatibility
+if [ -f "$SD/usr/lib/libpcap.so.1.1" ] || [ -f "$SD/usr/lib/libpcap.so.1.1.1" ]; then
+    ln -sf /usr/lib/libpcap.so.1.1 "$SD/usr/lib/libpcap.so.1.3" 2>/dev/null
+fi
+
+# Create symlink
+if [ -d "$SD/$NAME" ] && [ ! -L "$INFUSIONS_LINK/$NAME" ]; then
+    ln -s "$SD/$NAME" "$INFUSIONS_LINK/$NAME"
+    echo "Success: $NAME installed"
+    exit 0
+fi
+
+echo "Error: Installation failed"
+exit 1

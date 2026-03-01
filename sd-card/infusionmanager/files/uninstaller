@@ -1,0 +1,97 @@
+#!/bin/sh
+
+# Infusion Manager Uninstaller - called via at job
+# Usage: uninstaller <infusion_name>
+
+NAME="$1"
+SD="/sd"
+INFUSIONS_LINK="/pineapple/components/infusions"
+
+if [ -z "$NAME" ]; then
+    echo "Error: No infusion name provided"
+    exit 1
+fi
+
+# Dependency map
+DEPENDS="nmap:nmap
+deauth:mdk3,aireplay
+ettercap:ettercap
+sslstrip:sslstrip
+sslsplit:sslsplit
+strip-n-inject:sslstrip
+crafty:hping3
+occupineapple:mdk3,aireplay
+wps:reaver,bully,pixiewps
+p0f:p0f
+nbtscan:nbtscan"
+
+# Get dependencies for this infusion
+my_deps=$(echo "$DEPENDS" | grep "^$NAME:" | cut -d: -f2)
+
+# Check if any OTHER installed infusion needs a dependency
+is_dep_needed() {
+    dep=$1
+    # Check all other installed infusions
+    for inf in $(ls -1 "$INFUSIONS_LINK/" 2>/dev/null); do
+        # Skip the one we're uninstalling
+        [ "$inf" = "$NAME" ] && continue
+        # Skip non-infusions
+        [ "$inf" = "infusionmanager" ] && continue
+        # Get dependencies for this infusion
+        inf_deps=$(echo "$DEPENDS" | grep "^$inf:" | cut -d: -f2)
+        for d in $(echo "$inf_deps" | tr ',' ' '); do
+            if [ "$d" = "$dep" ]; then
+                return 1  # Dep is needed
+            fi
+        done
+    done
+    return 0  # Dep is NOT needed
+}
+
+# Remove dependencies if no longer needed
+if [ -n "$my_deps" ]; then
+    for dep in $(echo "$my_deps" | tr ',' ' '); do
+        if is_dep_needed "$dep"; then
+            echo "Removing unused dependency: $dep"
+            rm -f "$SD/usr/bin/$dep" 2>/dev/null
+            rm -f "$SD/usr/sbin/$dep" 2>/dev/null
+            rm -rf "$SD/$dep" 2>/dev/null
+        fi
+    done
+fi
+
+# Remove symlink
+if [ -L "$INFUSIONS_LINK/$NAME" ]; then
+    rm "$INFUSIONS_LINK/$NAME"
+fi
+
+# Remove copied bin/lib files (for dependency packages)
+if [ -d "$SD/$NAME/usr/sbin" ]; then
+    for bin in $(ls "$SD/$NAME/usr/sbin/"); do
+        rm -f "$SD/usr/sbin/$bin" 2>/dev/null
+    done
+fi
+if [ -d "$SD/$NAME/usr/lib" ]; then
+    for lib in $(ls "$SD/$NAME/usr/lib/"); do
+        rm -f "$SD/usr/lib/$lib" 2>/dev/null
+    done
+fi
+if [ -d "$SD/$NAME/usr/bin" ]; then
+    for bin in $(ls "$SD/$NAME/usr/bin/"); do
+        rm -f "$SD/usr/bin/$bin" 2>/dev/null
+    done
+fi
+
+# Also check for standalone binaries in /sd/usr/bin and /sd/usr/sbin
+rm -f "$SD/usr/bin/$NAME" 2>/dev/null
+rm -f "$SD/usr/sbin/$NAME" 2>/dev/null
+
+# Remove directory
+if [ -d "$SD/$NAME" ]; then
+    rm -rf "$SD/$NAME"
+    echo "Success: $NAME uninstalled"
+    exit 0
+fi
+
+echo "Success: $NAME uninstalled"
+exit 0
