@@ -1,6 +1,12 @@
 <script type='text/javascript' src='/components/infusions/connectedclients/js/dhcp_manager.js'></script>
 
-<h2>DHCP Manager <a href="#" onclick="dhcp_load_dashboard();return false;" style="text-decoration:none;color:#0af;margin-left:20px;margin-right:20px;"><b>↻ Refresh</b></a></h2>
+<h2 style="display:flex;justify-content:space-between;align-items:center;">
+  <span>DHCP Manager</span>
+  <span style="font-size:14px;margin-right:15px;">
+    <a href="#" onclick="dhcp_load_dashboard();return false;" style="text-decoration:none;color:#0af;margin-right:20px;"><b>↻ Refresh</b></a>
+    <a href="#" onclick="parent.pineapple.closePanel();return false;" style="text-decoration:none;color:#f66;"><b>✕ Close</b></a>
+  </span>
+</h2>
 
 <hr />
 

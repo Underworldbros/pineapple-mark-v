@@ -1,4 +1,4 @@
-<h2>Blacklisted Macs: <span id="blacklist_count"></span> <a href="#" onclick="get_blacklist_macs();return false;" style="text-decoration:none;color:#0af;margin-left:20px;margin-right:20px;"><b>↻ Refresh</b></a></h2>
+<h2>Blacklisted Macs: <span id="blacklist_count"></span></h2>
 <div id="blacklisted_macs">Loading Mac Blacklist ...</div>
 
 <form name="mac_address_form" action="/components/infusions/connectedclients/functions.php?action=remove_blacklisted_mac" method="POST" onsubmit="$(this).AJAXifyForm(refresh_blacklist_tab); return false;">

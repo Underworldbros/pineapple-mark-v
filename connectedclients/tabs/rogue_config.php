@@ -1,4 +1,4 @@
-<h2>Rogue AP Configuration <a href="#" onclick="get_rogue_status();return false;" style="text-decoration:none;color:#0af;margin-left:20px;margin-right:20px;"><b>↻ Refresh</b></a></h2>
+<h2>Rogue AP Configuration</h2>
 
 <div id="rogue_status">Loading...</div>
 
