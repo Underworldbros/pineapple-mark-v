@@ -1,12 +1,27 @@
 <script type='text/javascript' src='/components/infusions/connectedclients/js/dhcp_manager.js'></script>
 
-<h2 style="display:flex;justify-content:space-between;align-items:center;">
-  <span>DHCP Manager</span>
-  <span style="font-size:14px;margin-right:15px;">
-    <a href="#" onclick="dhcp_load_dashboard();return false;" style="text-decoration:none;color:#0af;margin-right:20px;"><b>↻ Refresh</b></a>
-    <a href="#" onclick="parent.pineapple.closePanel();return false;" style="text-decoration:none;color:#f66;"><b>✕ Close</b></a>
-  </span>
-</h2>
+<h2>DHCP Manager</h2>
+
+<style>
+.panel-refresh-btn {
+  position: absolute;
+  top: 15px;
+  right: 40px;
+  background: none;
+  border: none;
+  color: #0af;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  margin: 0;
+  z-index: 100;
+}
+.panel-refresh-btn:hover {
+  color: #0f0;
+}
+</style>
+
+<button class="panel-refresh-btn" onclick="dhcp_load_dashboard();return false;" title="Refresh">↻</button>
 
 <hr />
 

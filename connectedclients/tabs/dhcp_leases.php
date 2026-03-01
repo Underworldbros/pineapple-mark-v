@@ -1,3 +1,24 @@
+<style>
+.panel-refresh-btn {
+  position: absolute;
+  top: 15px;
+  right: 40px;
+  background: none;
+  border: none;
+  color: #0af;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  margin: 0;
+  z-index: 100;
+}
+.panel-refresh-btn:hover {
+  color: #0f0;
+}
+</style>
+
+<button class="panel-refresh-btn" onclick="get_large_tab_clients();return false;" title="Refresh">↻</button>
+
 <h2>DHCP Leases: <span id="connected_clients_count"></span></h2>                                              
 <center><div id='clients_report'>Loading data, please wait.</div></center>
 
