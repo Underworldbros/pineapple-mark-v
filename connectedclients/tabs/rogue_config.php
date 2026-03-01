@@ -1,4 +1,24 @@
-<h2 style="display:inline-block;">Rogue AP Configuration <button onclick="get_rogue_status();return false;" title="Refresh" style="background:none;border:none;color:#0af;font-size:16px;cursor:pointer;padding:0 8px;margin:0;vertical-align:middle;">↻</button></h2>
+<style>
+.refresh-icon {
+  position: absolute;
+  top: 12px;
+  right: 50px;
+  background: none;
+  border: none;
+  color: #0af;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 5px;
+  margin: 0;
+}
+.refresh-icon:hover {
+  color: #0f0;
+}
+</style>
+
+<button class="refresh-icon" onclick="get_rogue_status();return false;" title="Refresh">↻</button>
+
+<h2>Rogue AP Configuration</h2>
 
 <div id="rogue_status">Loading...</div>
 

@@ -1,4 +1,24 @@
-<h2 style="display:inline-block;">Blacklisted Macs: <span id="blacklist_count"></span> <button onclick="get_blacklist_macs();return false;" title="Refresh" style="background:none;border:none;color:#0af;font-size:16px;cursor:pointer;padding:0 8px;margin:0;vertical-align:middle;">↻</button></h2>
+<style>
+.refresh-icon {
+  position: absolute;
+  top: 12px;
+  right: 50px;
+  background: none;
+  border: none;
+  color: #0af;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 5px;
+  margin: 0;
+}
+.refresh-icon:hover {
+  color: #0f0;
+}
+</style>
+
+<button class="refresh-icon" onclick="get_blacklist_macs();return false;" title="Refresh">↻</button>
+
+<h2>Blacklisted Macs: <span id="blacklist_count"></span></h2>
 <div id="blacklisted_macs">Loading Mac Blacklist ...</div>
 
 <form name="mac_address_form" action="/components/infusions/connectedclients/functions.php?action=remove_blacklisted_mac" method="POST" onsubmit="$(this).AJAXifyForm(refresh_blacklist_tab); return false;">
