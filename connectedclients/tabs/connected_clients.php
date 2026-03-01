@@ -1,25 +1,4 @@
-<style>
-.panel-refresh-btn {
-  position: absolute;
-  top: 15px;
-  right: 40px;
-  background: none;
-  border: none;
-  color: #0af;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 2px 6px;
-  margin: 0;
-  z-index: 100;
-}
-.panel-refresh-btn:hover {
-  color: #0f0;
-}
-</style>
-
-<button class="panel-refresh-btn" onclick="get_iw_connected_clients();return false;" title="Refresh">↻</button>
-
-<h2>Connected Clients: <span id="clients_count"></span></h2>
+<h2 style="display:inline-block;">Connected Clients: <span id="clients_count"></span> <button onclick="get_iw_connected_clients();return false;" title="Refresh" style="background:none;border:none;color:#0af;font-size:16px;cursor:pointer;padding:0 8px;margin:0;vertical-align:middle;">↻</button></h2>
 <h2>Ethernet (br-lan): <span id="brlan_clients_count"></span></h2>
 <div id="brlan_clients">Loading br-lan clients ...</div>
 <hr />
